@@ -17,7 +17,12 @@ Relationships:
 
 Validation Rules:
 - name must be unique across rooms
-- capacity must be greater than zero (seeded data respects this)
+- capacity must be greater than zero
+
+Seeded Rooms (Created in prisma/seed.ts):
+- **Orion**: capacity 4, location "Floor 2"
+- **Andromeda**: capacity 8, location "Floor 2"
+- **Apollo**: capacity 12, location "Floor 3"
 
 ## Entity: Booking
 
@@ -41,9 +46,10 @@ Indexes:
 - composite index on roomId, startTime, endTime to support overlap lookups
 
 Validation Rules:
-- endTime must be later than startTime
-- startTime must be in the future at create time
-- duration must be less than or equal to 4 hours
+- organizerName and title must be trimmed and non-empty after validation
+- endTime must be strictly later than startTime (endTime > startTime)
+- startTime must be in the future at create time (compared against server UTC)
+- duration must be less than or equal to 4 hours (inclusive: exactly 4h allowed)
 - overlap with existing CONFIRMED bookings in same room is not allowed
 - consecutive bookings are allowed
 - CANCELLED bookings are excluded from overlap blocking

@@ -50,10 +50,15 @@ Expected outcome: all commands pass.
 
 ## Validation Scenarios
 
+### Scenario 0: Empty states (if database unseeded)
+
+- If rooms table is empty, GET /api/rooms returns empty array and UI displays "No rooms available".
+- If bookings table is empty, GET /api/bookings returns empty array and UI displays "No bookings".
+
 ### Scenario 1: Room list loads
 
 - Call GET /api/rooms or open the dashboard.
-- Expected: seeded rooms are returned and rendered.
+- Expected: seeded rooms (Orion, Andromeda, Apollo) are returned sorted alphabetically by name and rendered.
 
 ### Scenario 2: Successful booking creation
 
@@ -86,7 +91,19 @@ Expected outcome: all commands pass.
 - Submit booking with startTime in the past.
 - Expected: HTTP 400 with code BOOKING_IN_PAST.
 
-### Scenario 8: Cancellation preserves record and frees slot
+### Scenario 8: Room not found error
+
+- Submit POST /api/bookings with an invalid (non-existent) roomId.
+- Expected: HTTP 400 with error code ROOM_NOT_FOUND.
+
+### Scenario 9: String trimming and non-empty validation
+
+- Submit booking with organizerName or title that is empty or contains only whitespace.
+- Expected: HTTP 400 with error code INVALID_INPUT.
+- Submit booking with organizerName or title that is valid after trimming (e.g., " Alice " or "  Meeting  ").
+- Expected: HTTP 201 with trimmed values stored.
+
+### Scenario 10: Cancellation preserves record and frees slot
 
 - Cancel a CONFIRMED booking through POST /api/bookings/{id}/cancel.
 - Expected: booking becomes CANCELLED.

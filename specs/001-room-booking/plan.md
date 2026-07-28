@@ -2,9 +2,11 @@
 
 **Branch**: `001-room-booking` | **Date**: 2026-07-28 | **Spec**: `/specs/001-room-booking/spec.md`
 
-**Input**: Feature specification from `/specs/001-room-booking/spec.md`
+**Input**: Feature specification from `/specs/001-room-booking/spec.md` (updated with clarifications from session 2026-07-28)
 
-## Summary
+**Clarification Status**: ✅ Complete. 10 clarifications integrated and design artifacts re-validated.
+
+**Summary**
 
 Build a modular monolith RoomFlow MVP in a single Next.js App Router codebase that supports room listing, booking creation, overlap prevention, booking listing, and cancellation while preserving cancelled rows. Business rules are enforced in `src/lib/booking`, persistence access is isolated to `src/lib/prisma`, and route handlers remain thin.
 
@@ -101,11 +103,13 @@ Research completed in `/specs/001-room-booking/research.md` with concrete decisi
 
 ## Phase 1 Design Output
 
-Design artifacts generated:
+Design artifacts generated and re-validated after clarifications (2026-07-28):
 
-- `/specs/001-room-booking/data-model.md`
-- `/specs/001-room-booking/contracts/booking-api.openapi.yaml`
-- `/specs/001-room-booking/quickstart.md`
+- `/specs/001-room-booking/data-model.md` — updated with seeded room specifications and clarified validation rules
+- `/specs/001-room-booking/contracts/booking-api.openapi.yaml` — removed filtering parameters (out of MVP); added room-not-found error clarification
+- `/specs/001-room-booking/quickstart.md` — added empty state scenarios, room-not-found validation, string trimming scenarios
+
+**Validation Result**: ✅ All design artifacts align with clarified specification. No breaking changes required; design remains compatible with Phase 2 implementation.
 
 ## Constitution Check (Post-Design)
 

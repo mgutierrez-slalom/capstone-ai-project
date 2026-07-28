@@ -21,21 +21,10 @@ paths:
   /api/bookings:
     get:
       summary: List bookings
-      parameters:
-        - in: query
-          name: roomId
-          required: false
-          schema:
-            type: string
-          description: Optional room filter.
-        - in: query
-          name: status
-          required: false
-          schema:
-            $ref: '#/components/schemas/BookingStatus'
+      description: Returns all bookings ordered by startTime (ascending). No filtering available in MVP scope.
       responses:
         '200':
-          description: Booking list ordered by start time
+          description: Booking list ordered by start time ascending
           content:
             application/json:
               schema:
@@ -58,7 +47,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Booking'
         '400':
-          description: Invalid business input (for example room not found, booking in past, exceeds max duration)
+          description: Invalid business input (for example room not found, booking in past, exceeds max duration, empty/invalid strings)
           content:
             application/json:
               schema:
