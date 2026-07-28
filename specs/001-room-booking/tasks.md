@@ -56,9 +56,9 @@
 - Empty state: If no rooms exist, display "No rooms available" (AC-006)
 - No duplicate rooms in list
 
-- [ ] T017 [P] [US1] Create room query repository in src/lib/prisma/room-repository.ts with function getAllRooms() returning rooms sorted by name ascending
-- [ ] T018 [P] [US1] Create GET /api/rooms endpoint in src/app/api/rooms/route.ts that returns all rooms sorted by name as JSON
-- [ ] T019 [US1] Create integration test in tests/api/rooms.test.ts verifying GET /api/rooms returns seeded rooms in alphabetical order (Andromeda, Apollo, Orion)
+- [x] T017 [P] [US1] Create room query repository in src/lib/prisma/room-repository.ts with function getAllRooms() returning rooms sorted by name ascending
+- [x] T018 [P] [US1] Create GET /api/rooms endpoint in src/app/api/rooms/route.ts that returns all rooms sorted by name as JSON
+- [x] T019 [US1] Create integration test in tests/api/rooms.test.ts verifying GET /api/rooms returns seeded rooms in alphabetical order (Andromeda, Apollo, Orion)
 - [ ] T020 [P] [US1] Create RoomList component in src/components/RoomList.tsx to display rooms with empty state "No rooms available"
 - [ ] T021 [P] [US1] Create room list page at src/app/page.tsx that renders RoomList component
 - [ ] T022 [US1] Add Tailwind styling to RoomList and page layout in globals.css
@@ -79,19 +79,19 @@
 - Missing/invalid room rejected with 400 error (AC-008)
 - Empty/whitespace-only title or organizerName rejected with 400 error
 
-- [ ] T023 [P] [US2] Create booking repository in src/lib/prisma/booking-repository.ts with functions: getConfirmedBookingsForRoom(), createBooking(), getBooking()
-- [ ] T024 [P] [US2] Create booking validation service in src/lib/booking/booking-service.ts with createBooking() orchestrating all validation and transaction logic with internal conflict re-check
-- [ ] T025 [US2] Implement within booking-service.ts: past booking rejection (FR-004) using server UTC time reference
-- [ ] T026 [US2] Implement within booking-service.ts: overlap detection using booking-rules.ts (FR-005, FR-006) for CONFIRMED bookings only
-- [ ] T027 [US2] Implement within booking-service.ts: transactional conflict check and insert to prevent race conditions (Prisma transaction with re-check)
-- [ ] T028 [US2] Implement structured error responses in src/lib/booking/error-types.ts with error codes: INVALID_TIME_RANGE, BOOKING_IN_PAST, BOOKING_CONFLICT, MAX_DURATION_EXCEEDED, ROOM_NOT_FOUND, INVALID_INPUT
-- [ ] T029 [P] [US2] Create POST /api/bookings endpoint in src/app/api/bookings/route.ts with proper HTTP status codes (201 success, 400/409/422 errors)
-- [ ] T030 [US2] Create integration test in tests/api/bookings.test.ts for successful booking creation with all constraints (AC-001): valid range, future start, ≤4h duration, existing room, no conflict
-- [ ] T031 [US2] Create integration test in tests/api/bookings.test.ts for overlapping booking rejection (AC-002): HTTP 409 with BOOKING_CONFLICT
-- [ ] T032 [US2] Create integration test in tests/api/bookings.test.ts for consecutive booking allowance (AC-003): 11:00 start with previous 10:00 end
-- [ ] T033 [US2] Create integration test in tests/api/bookings.test.ts for invalid time range rejection (AC-004): HTTP 422 with INVALID_TIME_RANGE
-- [ ] T033b [US2] Create integration test in tests/api/bookings.test.ts for room-not-found error (AC-008): HTTP 400 with ROOM_NOT_FOUND when posting with invalid roomId
-- [ ] T033c [US2] Create integration test in tests/api/bookings.test.ts for string validation: empty/whitespace-only title and organizerName rejected with HTTP 400 and INVALID_INPUT error
+- [x] T023 [P] [US2] Create booking repository in src/lib/prisma/booking-repository.ts with functions: getConfirmedBookingsForRoom(), createBooking(), getBooking()
+- [x] T024 [P] [US2] Create booking validation service in src/lib/booking/booking-service.ts with createBooking() orchestrating all validation and transaction logic with internal conflict re-check
+- [x] T025 [US2] Implement within booking-service.ts: past booking rejection (FR-004) using server UTC time reference
+- [x] T026 [US2] Implement within booking-service.ts: overlap detection using booking-rules.ts (FR-005, FR-006) for CONFIRMED bookings only
+- [x] T027 [US2] Implement within booking-service.ts: transactional conflict check and insert to prevent race conditions (Prisma transaction with re-check)
+- [x] T028 [US2] Implement structured error responses in src/lib/booking/error-types.ts with error codes: INVALID_TIME_RANGE, BOOKING_IN_PAST, BOOKING_CONFLICT, MAX_DURATION_EXCEEDED, ROOM_NOT_FOUND, INVALID_INPUT
+- [x] T029 [P] [US2] Create POST /api/bookings endpoint in src/app/api/bookings/route.ts with proper HTTP status codes (201 success, 400/409/422 errors)
+- [x] T030 [US2] Create integration test in tests/api/bookings.test.ts for successful booking creation with all constraints (AC-001): valid range, future start, ≤4h duration, existing room, no conflict
+- [x] T031 [US2] Create integration test in tests/api/bookings.test.ts for overlapping booking rejection (AC-002): HTTP 409 with BOOKING_CONFLICT
+- [x] T032 [US2] Create integration test in tests/api/bookings.test.ts for consecutive booking allowance (AC-003): 11:00 start with previous 10:00 end
+- [x] T033 [US2] Create integration test in tests/api/bookings.test.ts for invalid time range rejection (AC-004): HTTP 422 with INVALID_TIME_RANGE
+- [x] T033b [US2] Create integration test in tests/api/bookings.test.ts for room-not-found error (AC-008): HTTP 400 with ROOM_NOT_FOUND when posting with invalid roomId
+- [x] T033c [US2] Create integration test in tests/api/bookings.test.ts for string validation: empty/whitespace-only title and organizerName rejected with HTTP 400 and INVALID_INPUT error
 - [ ] T034 [P] [US2] Create BookingForm component in src/components/BookingForm.tsx with input fields: room, organizer, title, startTime, endTime with UTC timestamp handling
 - [ ] T035 [US2] Implement form validation in BookingForm.tsx: trim strings, validate non-empty, check time range, verify future start, enforce ≤4h duration; display API error codes
 - [ ] T036 [US2] Create booking form page at src/app/bookings/new/page.tsx
@@ -109,8 +109,8 @@
 - Booking details include room name, organizer, title, time range
 - Empty state: If no bookings exist, display "No bookings" (AC-007)
 
-- [ ] T038 [P] [US4] Create GET /api/bookings endpoint in src/app/api/bookings/route.ts that returns all CONFIRMED bookings ordered by startTime ascending (no filtering available in MVP)
-- [ ] T039 [US4] Create integration test in tests/api/bookings.test.ts for GET /api/bookings returning all CONFIRMED bookings sorted by start time ascending
+- [x] T038 [P] [US4] Create GET /api/bookings endpoint in src/app/api/bookings/route.ts that returns all CONFIRMED bookings ordered by startTime ascending (no filtering available in MVP)
+- [x] T039 [US4] Create integration test in tests/api/bookings.test.ts for GET /api/bookings returning all CONFIRMED bookings sorted by start time ascending
 - [ ] T040 [P] [US4] Create BookingList component in src/components/BookingList.tsx to display bookings in table format with empty state "No bookings"
 - [ ] T041 [US4] Create booking list section on src/app/page.tsx that shows upcoming bookings with empty state
 - [ ] T042 [US4] Add Tailwind styling for booking table, time display formatting, and empty state message
@@ -127,12 +127,12 @@
 - Time slot of cancelled booking becomes available for new bookings
 - Cancelling already-cancelled booking is rejected or handled gracefully
 
-- [ ] T043 [P] [US5] Create cancelBooking() function in src/lib/booking/booking-service.ts with status transition logic
-- [ ] T044 [P] [US5] Create cancelBooking() repository function in src/lib/prisma/booking-repository.ts (status update to CANCELLED, no hard delete)
-- [ ] T045 [P] [US5] Create POST /api/bookings/{id}/cancel endpoint in src/app/api/bookings/[id]/cancel/route.ts
-- [ ] T046 [US5] Create integration test in tests/api/bookings.test.ts for successful cancellation (AC-005): status changes to CANCELLED
-- [ ] T047 [US5] Create integration test in tests/api/bookings.test.ts verifying cancelled booking does not block future reservations (AC-005)
-- [ ] T048 [US5] Create integration test in tests/api/bookings.test.ts for double-cancellation handling (cancel already-CANCELLED booking returns error)
+- [x] T043 [P] [US5] Create cancelBooking() function in src/lib/booking/booking-service.ts with status transition logic
+- [x] T044 [P] [US5] Create cancelBooking() repository function in src/lib/prisma/booking-repository.ts (status update to CANCELLED, no hard delete)
+- [x] T045 [P] [US5] Create POST /api/bookings/{id}/cancel endpoint in src/app/api/bookings/[id]/cancel/route.ts
+- [x] T046 [US5] Create integration test in tests/api/bookings.test.ts for successful cancellation (AC-005): status changes to CANCELLED
+- [x] T047 [US5] Create integration test in tests/api/bookings.test.ts verifying cancelled booking does not block future reservations (AC-005)
+- [x] T048 [US5] Create integration test in tests/api/bookings.test.ts for double-cancellation handling (cancel already-CANCELLED booking returns error)
 - [ ] T049 [P] [US5] Add cancel button to BookingList component that calls POST /api/bookings/{id}/cancel
 - [ ] T050 [US5] Implement confirmation dialog before cancelling booking
 - [ ] T051 [US5] Add success/error toast notifications for cancel operations
