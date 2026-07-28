@@ -19,6 +19,70 @@
   }
 }
 
+/* RoomFlow Styling */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Source Sans Pro',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Form Styling */
+input[type='text'],
+input[type='datetime-local'],
+select,
+textarea {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type='text']:focus,
+input[type='datetime-local']:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Button Styling */
+button {
+  transition: all 0.2s;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Toast Positioning */
+.fixed {
+  z-index: 50;
+}
+
+/* Table Styling */
+table {
+  border-collapse: collapse;
+}
+
+/* Loading State */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

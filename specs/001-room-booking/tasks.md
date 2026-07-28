@@ -59,9 +59,9 @@
 - [x] T017 [P] [US1] Create room query repository in src/lib/prisma/room-repository.ts with function getAllRooms() returning rooms sorted by name ascending
 - [x] T018 [P] [US1] Create GET /api/rooms endpoint in src/app/api/rooms/route.ts that returns all rooms sorted by name as JSON
 - [x] T019 [US1] Create integration test in tests/api/rooms.test.ts verifying GET /api/rooms returns seeded rooms in alphabetical order (Andromeda, Apollo, Orion)
-- [ ] T020 [P] [US1] Create RoomList component in src/components/RoomList.tsx to display rooms with empty state "No rooms available"
-- [ ] T021 [P] [US1] Create room list page at src/app/page.tsx that renders RoomList component
-- [ ] T022 [US1] Add Tailwind styling to RoomList and page layout in globals.css
+- [x] T020 [P] [US1] Create RoomList component in src/components/RoomList.tsx to display rooms with empty state "No rooms available"
+- [x] T021 [P] [US1] Create room list page at src/app/page.tsx that renders RoomList component
+- [x] T022 [US1] Add Tailwind styling to RoomList and page layout in globals.css
 
 ---
 
@@ -92,10 +92,10 @@
 - [x] T033 [US2] Create integration test in tests/api/bookings.test.ts for invalid time range rejection (AC-004): HTTP 422 with INVALID_TIME_RANGE
 - [x] T033b [US2] Create integration test in tests/api/bookings.test.ts for room-not-found error (AC-008): HTTP 400 with ROOM_NOT_FOUND when posting with invalid roomId
 - [x] T033c [US2] Create integration test in tests/api/bookings.test.ts for string validation: empty/whitespace-only title and organizerName rejected with HTTP 400 and INVALID_INPUT error
-- [ ] T034 [P] [US2] Create BookingForm component in src/components/BookingForm.tsx with input fields: room, organizer, title, startTime, endTime with UTC timestamp handling
-- [ ] T035 [US2] Implement form validation in BookingForm.tsx: trim strings, validate non-empty, check time range, verify future start, enforce ≤4h duration; display API error codes
-- [ ] T036 [US2] Create booking form page at src/app/bookings/new/page.tsx
-- [ ] T037 [US2] Add loading state during booking submission in BookingForm.tsx and page
+- [x] T034 [P] [US2] Create BookingForm component in src/components/BookingForm.tsx with input fields: room, organizer, title, startTime, endTime with UTC timestamp handling
+- [x] T035 [US2] Implement form validation in BookingForm.tsx: trim strings, validate non-empty, check time range, verify future start, enforce ≤4h duration; display API error codes
+- [x] T036 [US2] Create booking form page at src/app/bookings/new/page.tsx
+- [x] T037 [US2] Add loading state during booking submission in BookingForm.tsx and page
 
 ---
 
@@ -111,9 +111,9 @@
 
 - [x] T038 [P] [US4] Create GET /api/bookings endpoint in src/app/api/bookings/route.ts that returns all CONFIRMED bookings ordered by startTime ascending (no filtering available in MVP)
 - [x] T039 [US4] Create integration test in tests/api/bookings.test.ts for GET /api/bookings returning all CONFIRMED bookings sorted by start time ascending
-- [ ] T040 [P] [US4] Create BookingList component in src/components/BookingList.tsx to display bookings in table format with empty state "No bookings"
-- [ ] T041 [US4] Create booking list section on src/app/page.tsx that shows upcoming bookings with empty state
-- [ ] T042 [US4] Add Tailwind styling for booking table, time display formatting, and empty state message
+- [x] T040 [P] [US4] Create BookingList component in src/components/BookingList.tsx to display bookings in table format with empty state "No bookings"
+- [x] T041 [US4] Create booking list section on src/app/page.tsx that shows upcoming bookings with empty state
+- [x] T042 [US4] Add Tailwind styling for booking table, time display formatting, and empty state message
 
 ---
 
@@ -133,9 +133,9 @@
 - [x] T046 [US5] Create integration test in tests/api/bookings.test.ts for successful cancellation (AC-005): status changes to CANCELLED
 - [x] T047 [US5] Create integration test in tests/api/bookings.test.ts verifying cancelled booking does not block future reservations (AC-005)
 - [x] T048 [US5] Create integration test in tests/api/bookings.test.ts for double-cancellation handling (cancel already-CANCELLED booking returns error)
-- [ ] T049 [P] [US5] Add cancel button to BookingList component that calls POST /api/bookings/{id}/cancel
-- [ ] T050 [US5] Implement confirmation dialog before cancelling booking
-- [ ] T051 [US5] Add success/error toast notifications for cancel operations
+- [x] T049 [P] [US5] Add cancel button to BookingList component that calls POST /api/bookings/{id}/cancel
+- [x] T050 [US5] Implement confirmation dialog before cancelling booking
+- [x] T051 [US5] Add success/error toast notifications for cancel operations
 
 ---
 
