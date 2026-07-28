@@ -1,141 +1,121 @@
-﻿# Implementation Plan
+﻿# Implementation Plan: RoomFlow Meeting Room Booking
 
-## Technical Stack
+**Branch**: `001-room-booking` | **Date**: 2026-07-28 | **Spec**: `/specs/001-room-booking/spec.md`
 
-- Next.js
-- TypeScript
-- App Router
-- Tailwind CSS
-- Prisma
-- SQLite
-- Vitest
-- GitHub Actions
-- pnpm
+**Input**: Feature specification from `/specs/001-room-booking/spec.md`
 
-## Architecture
+## Summary
 
-The project uses a single Next.js application containing:
+Build a modular monolith RoomFlow MVP in a single Next.js App Router codebase that supports room listing, booking creation, overlap prevention, booking listing, and cancellation while preserving cancelled rows. Business rules are enforced in `src/lib/booking`, persistence access is isolated to `src/lib/prisma`, and route handlers remain thin.
 
-- frontend pages and components;
-- route handlers;
-- domain rules;
-- application services;
-- Prisma persistence.
+## Technical Context
 
-## Layers
+**Language/Version**: TypeScript (strict), Node.js runtime for Next.js route handlers
 
-### Presentation
+**Primary Dependencies**: Next.js App Router, React, Tailwind CSS, Prisma ORM, Prisma Client, Vitest
 
-Location:
+**Storage**: SQLite via Prisma
 
-- src/app
-- src/components
+**Testing**: Vitest for unit tests and integration-style service/API tests
 
-Responsibilities:
+**Target Platform**: Web application (desktop and mobile browsers) hosted as a single Next.js app
 
-- render rooms and bookings;
-- collect booking input;
-- display validation errors;
-- trigger booking and cancellation actions.
+**Project Type**: Web application (modular monolith)
 
-### Application
+**Performance Goals**: Correctness-first MVP with responsive validation and conflict checks for small office-scale usage
 
-Location:
+**Constraints**: No authentication, no microservices, no external integrations, no recurring bookings, no hard deletes for bookings, max booking duration 4 hours
 
-- src/lib/booking/booking-service.ts
+**Scale/Scope**: MVP for a single office with seeded rooms and moderate concurrent booking attempts
 
-Responsibilities:
+## Constitution Check
 
-- create bookings;
-- validate input;
-- check room existence;
-- detect conflicts;
-- cancel bookings.
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-### Domain
+- Specification First: PASS. Feature spec exists and defines stories, requirements, acceptance criteria, assumptions, and out-of-scope boundaries.
+- Business Rules Outside UI: PASS. Plan places overlap, duration, date-range, and temporal validation in `src/lib/booking`.
+- Critical Rules Must Be Tested: PASS. Test coverage is planned for partial/complete/contained overlaps, consecutive bookings, invalid ranges, and cancelled booking reuse.
+- Small and Reviewable Changes: PASS. Work is decomposed into spec-linked tasks and quality gates.
+- AI-Assisted, Human-Reviewed: PASS. No unnecessary dependencies; architecture boundaries preserved.
+- MVP Simplicity: PASS. Explicitly excludes authentication, external integrations, and microservices.
 
-Location:
+## Project Structure
 
-- src/lib/booking/booking-rules.ts
+### Documentation (this feature)
 
-Responsibilities:
+```text
+specs/001-room-booking/
+├── plan.md
+├── research.md
+├── data-model.md
+├── quickstart.md
+├── contracts/
+└── tasks.md
+```
 
-- validate time ranges;
-- calculate duration;
-- detect overlap;
-- enforce critical booking rules.
+### Source Code (repository root)
 
-### Persistence
+```text
+prisma/
+├── schema.prisma
+└── seed.ts
 
-Location:
+src/
+├── app/
+│   ├── api/
+│   │   ├── rooms/
+│   │   └── bookings/
+│   │       └── [id]/cancel/
+│   ├── bookings/new/
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+└── lib/
+	├── booking/
+	│   ├── booking-rules.ts
+	│   └── booking-service.ts
+	└── prisma/
+		├── client.ts
+		├── room-repository.ts
+		└── booking-repository.ts
 
-- src/lib/prisma
-- prisma
+tests/
+├── booking-rules.test.ts
+├── booking-service.test.ts
+└── api/
+	└── bookings.test.ts
+```
 
-Responsibilities:
+**Structure Decision**: Single Next.js modular monolith. Keep HTTP concerns in route handlers, domain policy in `src/lib/booking`, and persistence access in `src/lib/prisma`.
 
-- store rooms;
-- store bookings;
-- query confirmed bookings;
-- preserve cancelled reservations.
+## Phase 0 Research Output
 
-## Data Model
+Research completed in `/specs/001-room-booking/research.md` with concrete decisions on:
 
-### Room
+- overlap semantics for confirmed bookings;
+- UTC normalization and server-time validation;
+- cancellation as status transition (soft-state retention);
+- 4-hour duration enforcement;
+- structured API validation error format;
+- transaction-based concurrency handling in SQLite/Prisma.
 
-- id
-- name
-- capacity
-- location
-- createdAt
-- updatedAt
+## Phase 1 Design Output
 
-### Booking
+Design artifacts generated:
 
-- id
-- roomId
-- organizerName
-- title
-- startTime
-- endTime
-- status
-- createdAt
-- updatedAt
+- `/specs/001-room-booking/data-model.md`
+- `/specs/001-room-booking/contracts/booking-api.openapi.yaml`
+- `/specs/001-room-booking/quickstart.md`
 
-## API
+## Constitution Check (Post-Design)
 
-### GET /api/rooms
+- Specification First: PASS. Contracts and data model map directly to FR and AC clauses.
+- Business Rules Outside UI: PASS. Contracts keep route handlers thin and delegate validation to booking service.
+- Critical Rules Must Be Tested: PASS. Quickstart includes scenarios covering all constitution-mandated rule tests.
+- Small and Reviewable Changes: PASS. Artifacts keep scope focused on MVP without expansion.
+- AI-Assisted, Human-Reviewed: PASS. Design avoids unnecessary packages and preserves repository boundaries.
+- MVP Simplicity: PASS. No auth, microservices, or external integrations introduced.
 
-Returns seeded meeting rooms.
+## Complexity Tracking
 
-### GET /api/bookings
-
-Returns bookings ordered by start time.
-
-### POST /api/bookings
-
-Creates a booking after validating all business rules.
-
-### POST /api/bookings/{id}/cancel
-
-Changes a confirmed booking to CANCELLED.
-
-## Testing Strategy
-
-Unit tests must cover booking rules independently from the database.
-
-Integration tests should cover:
-
-- successful booking creation;
-- conflict rejection;
-- cancellation;
-- reuse of a cancelled booking slot.
-
-## Quality Gates
-
-The following commands must pass:
-
-- pnpm lint
-- pnpm typecheck
-- pnpm test
-- pnpm build
+No constitution violations requiring justification.

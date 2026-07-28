@@ -1,0 +1,214 @@
+openapi: 3.1.0
+info:
+  title: RoomFlow Booking API
+  version: 1.0.0
+  description: API contracts for room listing, booking listing/creation, and booking cancellation in RoomFlow MVP.
+servers:
+  - url: /
+paths:
+  /api/rooms:
+    get:
+      summary: List rooms
+      responses:
+        '200':
+          description: Room list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+  /api/bookings:
+    get:
+      summary: List bookings
+      parameters:
+        - in: query
+          name: roomId
+          required: false
+          schema:
+            type: string
+          description: Optional room filter.
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+      responses:
+        '200':
+          description: Booking list ordered by start time
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+    post:
+      summary: Create booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid business input (for example room not found, booking in past, exceeds max duration)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Overlapping confirmed booking exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Invalid time range semantics (for example endTime not after startTime)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/bookings/{id}/cancel:
+    post:
+      summary: Cancel booking
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Booking already cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+components:
+  schemas:
+    Room:
+      type: object
+      required:
+        - id
+        - name
+        - capacity
+        - location
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        location:
+          type: string
+    BookingStatus:
+      type: string
+      enum:
+        - CONFIRMED
+        - CANCELLED
+    Booking:
+      type: object
+      required:
+        - id
+        - roomId
+        - organizerName
+        - title
+        - startTime
+        - endTime
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        roomId:
+          type: string
+        organizerName:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        startTime:
+          type: string
+          format: date-time
+          description: UTC timestamp
+        endTime:
+          type: string
+          format: date-time
+          description: UTC timestamp
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateBookingRequest:
+      type: object
+      required:
+        - roomId
+        - organizerName
+        - title
+        - startTime
+        - endTime
+      properties:
+        roomId:
+          type: string
+        organizerName:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        startTime:
+          type: string
+          format: date-time
+          description: Client timestamp parsed and validated server-side
+        endTime:
+          type: string
+          format: date-time
+          description: Must be strictly later than startTime
+    ApiError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          examples:
+            - INVALID_TIME_RANGE
+            - BOOKING_IN_PAST
+            - BOOKING_CONFLICT
+            - MAX_DURATION_EXCEEDED
+            - ROOM_NOT_FOUND
+            - BOOKING_NOT_FOUND
+            - BOOKING_ALREADY_CANCELLED
+        message:
+          type: string
+        field:
+          type: string
+          description: Optional field hint for UI validation mapping
