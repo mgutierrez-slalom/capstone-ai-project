@@ -86,6 +86,7 @@
 - [ ] T031 [US2] Create integration test in tests/api/bookings.test.ts for overlapping booking rejection (AC-002)
 - [ ] T032 [US2] Create integration test in tests/api/bookings.test.ts for consecutive booking allowance (AC-003)
 - [ ] T033 [US2] Create integration test in tests/api/bookings.test.ts for invalid time range rejection (AC-004)
+- [ ] T033b [US2] Create integration test in tests/api/bookings.test.ts for room-not-found error when posting booking with invalid roomId (AC-008)
 - [ ] T034 [P] [US2] Create BookingForm component in src/components/BookingForm.tsx with input fields: room, organizer, title, startTime, endTime
 - [ ] T035 [US2] Implement form validation and error display in BookingForm.tsx matching API error codes
 - [ ] T036 [US2] Create booking form page at src/app/bookings/new/page.tsx
@@ -103,12 +104,12 @@
 - Cancelled bookings not shown in main list (or shown separately with clear indication)
 - Booking details include room, organizer, title, time range
 
-- [ ] T038 [P] [US4] Create GET /api/bookings endpoint in src/app/api/bookings/route.ts that returns all bookings ordered by startTime
+- [ ] T038 [P] [US4] Create GET /api/bookings endpoint in src/app/api/bookings/route.ts that returns all bookings ordered by startTime (ascending)
 - [ ] T039 [US4] Create integration test in tests/api/bookings.test.ts for GET /api/bookings returning all bookings sorted by start time
-- [ ] T040 [US4] Add optional query parameters to GET /api/bookings for filtering (roomId, status)
-- [ ] T041 [P] [US4] Create BookingList component in src/components/BookingList.tsx to display bookings in table format
-- [ ] T042 [US4] Create booking list section or page in src/app/page.tsx that shows upcoming bookings
-- [ ] T043 [US4] Add Tailwind styling for booking table and time display formatting
+- [ ] T040 [P] [US4] Create BookingList component in src/components/BookingList.tsx to display bookings in table format
+- [ ] T040 [P] [US4] Create BookingList component in src/components/BookingList.tsx to display bookings in table format
+- [ ] T041 [US4] Create booking list section or page in src/app/page.tsx that shows upcoming bookings
+- [ ] T042 [US4] Add Tailwind styling for booking table and time display formatting
 
 ---
 
@@ -122,15 +123,15 @@
 - Time slot of cancelled booking becomes available for new bookings
 - Cancelling already-cancelled booking is rejected or handled gracefully
 
-- [ ] T044 [P] [US5] Create cancelBooking() function in src/lib/booking/booking-service.ts
-- [ ] T045 [P] [US5] Create cancelBooking() repository function in src/lib/prisma/booking-repository.ts (status update to CANCELLED)
-- [ ] T046 [P] [US5] Create POST /api/bookings/{id}/cancel endpoint in src/app/api/bookings/[id]/cancel/route.ts
-- [ ] T047 [US5] Create integration test in tests/api/bookings.test.ts for successful cancellation (AC-005)
-- [ ] T048 [US5] Create integration test in tests/api/bookings.test.ts verifying cancelled booking does not block future reservations
-- [ ] T049 [US5] Create integration test in tests/api/bookings.test.ts for double-cancellation error handling
-- [ ] T050 [P] [US5] Add cancel button to BookingList component that calls POST /api/bookings/{id}/cancel
-- [ ] T051 [US5] Implement confirmation dialog before cancelling booking
-- [ ] T052 [US5] Add success/error toast notifications for cancel operations
+- [ ] T043 [P] [US5] Create cancelBooking() function in src/lib/booking/booking-service.ts
+- [ ] T044 [P] [US5] Create cancelBooking() repository function in src/lib/prisma/booking-repository.ts (status update to CANCELLED)
+- [ ] T045 [P] [US5] Create POST /api/bookings/{id}/cancel endpoint in src/app/api/bookings/[id]/cancel/route.ts
+- [ ] T046 [US5] Create integration test in tests/api/bookings.test.ts for successful cancellation (AC-005)
+- [ ] T047 [US5] Create integration test in tests/api/bookings.test.ts verifying cancelled booking does not block future reservations
+- [ ] T048 [US5] Create integration test in tests/api/bookings.test.ts for double-cancellation error handling
+- [ ] T049 [P] [US5] Add cancel button to BookingList component that calls POST /api/bookings/{id}/cancel
+- [ ] T050 [US5] Implement confirmation dialog before cancelling booking
+- [ ] T051 [US5] Add success/error toast notifications for cancel operations
 
 ---
 
@@ -138,18 +139,18 @@
 
 **Purpose**: Quality gates, testing completeness, documentation, and CI/CD setup
 
-- [ ] T053 Run full test suite: `pnpm test` passes with coverage for all critical rules (overlap, duration, consecutive, cancellation reuse)
-- [ ] T054 Run type checking: `pnpm typecheck` passes with no errors
-- [ ] T055 Run linting: `pnpm lint` passes with no errors
-- [ ] T056 Run build: `pnpm build` completes successfully with no errors
-- [ ] T057 Create GitHub Actions CI workflow in .github/workflows/ci.yml that runs lint, typecheck, test, build on every push
-- [ ] T058 Add environment configuration management (.env.example, .env.local) for database URL and app settings
-- [ ] T059 Update README.md with project overview, tech stack, setup instructions, running dev server, and quality gate commands
-- [ ] T060 Add architectural documentation in docs/architecture.md covering layers (presentation, service, domain, persistence)
-- [ ] T061 Document booking business rules and conflict detection in docs/booking-rules.md
-- [ ] T062 Verify all repository instructions followed: strict TypeScript, business rules in lib/booking, persistence in lib/prisma, thin handlers
-- [ ] T063 Final validation: manually test all user stories end-to-end (room list → create booking → view bookings → cancel booking)
-- [ ] T064 Verify acceptance criteria met for all user stories (AC-001 through AC-005)
+- [ ] T052 Run full test suite: `pnpm test` passes with coverage for all critical rules (overlap, duration, consecutive, cancellation reuse)
+- [ ] T053 Run type checking: `pnpm typecheck` passes with no errors
+- [ ] T054 Run linting: `pnpm lint` passes with no errors
+- [ ] T055 Run build: `pnpm build` completes successfully with no errors
+- [ ] T056 Create GitHub Actions CI workflow in .github/workflows/ci.yml that runs lint, typecheck, test, build on every push
+- [ ] T057 Add environment configuration management (.env.example, .env.local) for database URL and app settings
+- [ ] T058 Update README.md with project overview, tech stack, setup instructions, running dev server, and quality gate commands
+- [ ] T059 Add architectural documentation in docs/architecture.md covering layers (presentation, service, domain, persistence)
+- [ ] T060 Document booking business rules and conflict detection in docs/booking-rules.md
+- [ ] T061 Verify all repository instructions followed: strict TypeScript, business rules in lib/booking, persistence in lib/prisma, thin handlers
+- [ ] T062 Final validation: manually test all user stories end-to-end (room list → create booking → view bookings → cancel booking)
+- [ ] T063 Verify acceptance criteria met for all user stories (AC-001 through AC-008)
 
 ---
 
@@ -172,15 +173,15 @@
 
 ```
 Iteration 1: T001-T037 (Setup + Foundation + View Rooms + Create/Prevent)
-  Delivers: Users can view rooms and create bookings with conflict detection
+  Delivers: Users can view rooms and create bookings with conflict detection (including room-not-found error)
   Quality gates pass
   Ready for user testing
 
-Iteration 2: T038-T052 (View Bookings + Cancel)
+Iteration 2: T038-T051 (View Bookings + Cancel)
   Adds: Booking listing and cancellation
   Completes all user stories
 
-Iteration 3: T053-T064 (Polish)
+Iteration 3: T052-T063 (Polish)
   Adds: CI/CD, documentation, final validation
   Release ready
 ```
@@ -192,7 +193,7 @@ Iteration 3: T053-T064 (Polish)
 Each task follows: `- [ ] [ID] [P?] [Story?] Description with exact file path`
 
 - `- [ ]` = unchecked markdown checkbox
-- `T001` = sequential task ID (T001, T002, …, T064)
+- `[ID]` = sequential task ID (T001, T002, …, T063) — note T033b for room-not-found test
 - `[P]` = parallelizable (only if task uses different files and no dependencies on incomplete tasks)
 - `[USx]` = user story mapping (US1, US2, US3, US4, US5)
 - File paths are relative to repository root: `src/app/`, `tests/`, `prisma/`, `.github/`

@@ -26,29 +26,44 @@ As a user, I want to view existing bookings so that I can understand room usage.
 
 As a user, I want to cancel a booking so that the room becomes available again.
 
+## Clarifications
+
+### Session 2026-07-28
+
+- Room sort order: Alphabetically by name (ascending)
+- 4-hour boundary: Exactly 4h permitted (≤4h inclusive)
+- Room not found error: HTTP 400 with code ROOM_NOT_FOUND
+- Timestamps: ISO 8601 UTC; server validates against current UTC; frontend converts local input to UTC
+- String fields: title and organizerName must be trimmed and non-empty
+- Booking list order: By startTime ascending
+- Seeded rooms: Orion (capacity 4, Floor 2), Andromeda (capacity 8, Floor 2), Apollo (capacity 12, Floor 3)
+- Empty states: Define for no rooms and no bookings
+- Booking list filtering: Remove roomId and status filters; not in MVP scope
+- Successful booking criteria: Valid time range, future start time, duration ≤4 hours, existing room, no conflict
+
 ## Functional Requirements
 
 ### FR-001
 
-The system must display all seeded meeting rooms.
+The system must display all seeded meeting rooms sorted alphabetically by name in ascending order.
 
 ### FR-002
 
 The system must allow a user to create a booking with:
 
-- room;
-- title;
-- organizer name;
-- start date and time;
-- end date and time.
+- room (must exist);
+- title (required, trimmed, non-empty);
+- organizer name (required, trimmed, non-empty);
+- start date and time (must be in the future, UTC);
+- end date and time (must be after start time, UTC).
 
 ### FR-003
 
-The end time must be later than the start time.
+The end time must be strictly later than the start time (endTime > startTime).
 
 ### FR-004
 
-The system must reject bookings in the past.
+The system must reject bookings where the start time is in the past. Past validation is performed against the current server time (UTC).
 
 ### FR-005
 
@@ -81,7 +96,7 @@ A booking must have one of these statuses:
 
 ### FR-010
 
-The maximum booking duration is four hours.
+Booking duration must not exceed four hours (inclusive). Bookings exactly 4 hours long are permitted; durations greater than 4 hours are rejected.
 
 ## Conflict Rule
 
@@ -100,7 +115,11 @@ Only confirmed bookings participate in conflict validation.
 ### AC-001 Successful booking
 
 Given a room without conflicting bookings  
-When the user submits a valid reservation  
+When the user submits a valid reservation with:  
+  - end time later than start time;  
+  - start time in the future (UTC);  
+  - duration ≤ 4 hours;  
+  - existing room;  
 Then the booking is created with status CONFIRMED.
 
 ### AC-002 Overlapping booking
@@ -128,6 +147,40 @@ When the user cancels it
 Then its status changes to CANCELLED  
 And its time slot becomes available.
 
+### AC-006 Empty room list
+
+Given no rooms have been seeded  
+When the user opens the dashboard  
+Then the UI displays "No rooms available".
+
+### AC-007 Empty booking list
+
+Given no bookings exist  
+When the user views the booking list  
+Then the UI displays "No bookings".
+
+### AC-008 Room not found error
+
+Given a booking creation request with an invalid (non-existent) roomId  
+When the user submits the form  
+Then the system returns HTTP 400 with error code ROOM_NOT_FOUND.
+
+## Seeded Rooms
+
+The system must pre-populate the database with three meeting rooms:
+
+- **Orion**: capacity 4, location "Floor 2"
+- **Andromeda**: capacity 8, location "Floor 2"
+- **Apollo**: capacity 12, location "Floor 3"
+
+## API Timestamp Format
+
+All booking timestamps (startTime, endTime, createdAt, updatedAt) are stored and returned in ISO 8601 UTC format (e.g., "2026-07-28T14:30:00Z").
+
+Frontend logic must:
+- Convert user-provided local time to UTC before submission
+- Display UTC timestamps in local timezone to the user
+
 ## Out of Scope
 
 - user authentication;
@@ -139,4 +192,5 @@ And its time slot becomes available.
 - editing bookings;
 - check-in functionality;
 - multiple offices;
-- cloud deployment.
+- cloud deployment;
+- booking list filtering by roomId or status.
