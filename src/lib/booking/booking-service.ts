@@ -4,8 +4,8 @@ import {
 } from './booking-rules';
 import { createError, type ValidationError } from './error-types';
 import * as bookingRepo from '@/lib/prisma/booking-repository';
+import type { Booking } from '@/lib/prisma/booking-repository';
 import * as roomRepo from '@/lib/prisma/room-repository';
-import { prisma } from '@/lib/prisma/client';
 
 export interface CreateBookingRequest {
   roomId: string;
@@ -15,17 +15,8 @@ export interface CreateBookingRequest {
   endTime: Date;
 }
 
-export type Booking = {
-  id: string;
-  roomId: string;
-  title: string;
-  organizerName: string;
-  startTime: Date;
-  endTime: Date;
-  status: 'CONFIRMED' | 'CANCELLED';
-  createdAt: Date;
-  updatedAt: Date;
-};
+// Re-export Booking type for convenience
+export type { Booking } from '@/lib/prisma/booking-repository';
 
 export async function createBooking(
   request: CreateBookingRequest,
@@ -99,99 +90,77 @@ export async function createBooking(
     };
   }
 
-  // Check for conflicts with transaction and re-check
+  // All domain validations passed - attempt atomic booking creation
+  // This function owns the transaction and handles conflicts internally
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      // Re-check for overlaps inside transaction
-      const existingBookings = await tx.booking.findMany({
-        where: {
-          roomId: request.roomId,
-          status: 'CONFIRMED',
-          NOT: {
-            OR: [
-              { endTime: { lte: request.startTime } },
-              { startTime: { gte: request.endTime } },
-            ],
-          },
-        },
-      });
-
-      if (existingBookings.length > 0) {
-        return {
-          success: false as const,
-          error: createError('BOOKING_CONFLICT', 'Time slot is already booked'),
-        };
-      }
-
-      // Create booking
-      const booking = await tx.booking.create({
-        data: {
-          roomId: request.roomId,
-          organizerName,
-          title,
-          startTime: request.startTime,
-          endTime: request.endTime,
-          status: 'CONFIRMED',
-        },
-      });
-
-      return {
-        success: true as const,
-        booking: {
-          id: booking.id,
-          roomId: booking.roomId,
-          title: booking.title,
-          organizerName: booking.organizerName,
-          startTime: booking.startTime,
-          endTime: booking.endTime,
-          status: booking.status,
-          createdAt: booking.createdAt,
-          updatedAt: booking.updatedAt,
-        },
-      };
+    const booking = await bookingRepo.createBookingWithConflictCheck({
+      roomId: request.roomId,
+      organizerName,
+      title,
+      startTime: request.startTime,
+      endTime: request.endTime,
     });
 
-    return result;
+    if (booking === null) {
+      // Conflict detected within transaction
+      return {
+        success: false,
+        error: createError('BOOKING_CONFLICT', 'Time slot is already booked'),
+      };
+    }
+
+    return {
+      success: true,
+      booking,
+    };
   } catch (error) {
-    console.error('Booking creation error:', error);
+    // Infrastructure error (Prisma/SQLite/transaction issue)
+    // Do not misclassify as domain error
+    console.error('Booking creation infrastructure error:', error);
     throw error;
   }
 }
 
-export async function cancelBooking(bookingId: string): Promise<{
-  success: true;
-  booking: Booking;
-} | { success: false; error: ValidationError }> {
-  const booking = await bookingRepo.getBookingById(bookingId);
+export async function cancelBooking(
+  bookingId: string,
+): Promise<{ success: true; booking: Booking } | { success: false; error: ValidationError }> {
+  try {
+    // Attempt atomic cancellation: only succeeds if booking exists and is CONFIRMED
+    const cancelled = await bookingRepo.cancelBookingIfConfirmed(bookingId);
 
-  if (!booking) {
+    if (cancelled === null) {
+      // Either booking doesn't exist OR is already cancelled
+      // Need to check which case it is for correct error response
+      const existing = await bookingRepo.getBookingById(bookingId);
+
+      if (!existing) {
+        // Booking doesn't exist
+        return {
+          success: false,
+          error: createError('BOOKING_NOT_FOUND', 'Booking not found'),
+        };
+      } else if (existing.status === 'CANCELLED') {
+        // Booking exists but is already cancelled
+        return {
+          success: false,
+          error: createError('BOOKING_ALREADY_CANCELLED', 'Booking is already cancelled'),
+        };
+      }
+
+      // Shouldn't reach here, but handle gracefully
+      return {
+        success: false,
+        error: createError('BOOKING_NOT_FOUND', 'Booking not found'),
+      };
+    }
+
     return {
-      success: false,
-      error: createError('BOOKING_NOT_FOUND', 'Booking not found'),
+      success: true,
+      booking: cancelled,
     };
+  } catch (error) {
+    // Infrastructure error (Prisma/SQLite/transaction issue)
+    console.error('Booking cancellation infrastructure error:', error);
+    throw error;
   }
-
-  if (booking.status === 'CANCELLED') {
-    return {
-      success: false,
-      error: createError('BOOKING_ALREADY_CANCELLED', 'Booking is already cancelled'),
-    };
-  }
-
-  const cancelled = await bookingRepo.cancelBooking(bookingId);
-
-  return {
-    success: true as const,
-    booking: {
-      id: cancelled.id,
-      roomId: cancelled.roomId,
-      title: cancelled.title,
-      organizerName: cancelled.organizerName,
-      startTime: cancelled.startTime,
-      endTime: cancelled.endTime,
-      status: cancelled.status,
-      createdAt: cancelled.createdAt,
-      updatedAt: cancelled.updatedAt,
-    },
-  };
 }

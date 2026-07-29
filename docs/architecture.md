@@ -105,3 +105,64 @@ Booking
 ```
 
 Composite index on `(roomId, startTime, endTime)` optimizes overlap queries.
+
+## Persistence Boundary & Transaction Ownership
+
+The **booking-repository** layer owns all transaction logic and database operations. The service layer coordinates domain decisions but **does not** interact with PrismaClient directly.
+
+### Atomic Booking Creation
+
+Function: `bookingRepo.createBookingWithConflictCheck(input)`
+
+- Owns the transaction lifecycle
+- Performs conflict re-check inside the transaction
+- Returns the created Booking on success, or `null` if a conflict was detected
+- Throws infrastructure errors (Prisma/SQLite failures) unchanged
+- **Prevents race conditions**: two concurrent identical requests for the same room/time cannot both succeed
+
+**SQLite Behavior**: Transactions serialize on write. The first writer succeeds; the second blocks, re-checks inside its transaction, finds the conflict, and returns null.
+
+### Atomic Booking Cancellation
+
+Function: `bookingRepo.cancelBookingIfConfirmed(bookingId)`
+
+- Uses conditional UPDATE: only rows where `status = 'CONFIRMED'` are updated to `'CANCELLED'`
+- No read-then-update pattern (avoids race-prone double-cancellation)
+- Returns the cancelled Booking on success, or `null` if the booking didn't exist or was already cancelled
+- Throws infrastructure errors unchanged
+- **Guarantees**: only one concurrent cancellation can succeed
+
+### Service Layer Coordination
+
+The booking-service layer:
+
+1. Validates domain rules (empty fields, time ranges, future times, duration, room existence)
+2. Calls atomic repository functions
+3. Maps outcomes to domain errors (BOOKING_CONFLICT, BOOKING_ALREADY_CANCELLED, BOOKING_NOT_FOUND)
+4. Lets infrastructure errors bubble up (logs with context)
+
+## Error Classification
+
+### Domain Errors
+
+These are expected and represent business rule violations. Returned to the client with appropriate HTTP status codes:
+
+| Error Code | HTTP | Meaning |
+|---|---|---|
+| INVALID_INPUT | 400 | Empty/whitespace field or missing required field |
+| INVALID_TIME_RANGE | 422 | `endTime ≤ startTime` |
+| BOOKING_IN_PAST | 400 | `startTime ≤ current UTC time` |
+| MAX_DURATION_EXCEEDED | 400 | Booking duration > 4 hours |
+| ROOM_NOT_FOUND | 400 | Room ID does not exist |
+| BOOKING_CONFLICT | 409 | Time slot already booked in same room |
+| BOOKING_NOT_FOUND | 404 | Booking ID does not exist |
+| BOOKING_ALREADY_CANCELLED | 409 | Attempt to cancel an already-CANCELLED booking |
+
+### Infrastructure Errors
+
+Unexpected failures from Prisma, SQLite, transactions, or I/O:
+
+- **Never automatically classified** as a domain error (especially not as BOOKING_CONFLICT)
+- Logged with full context (stack trace) for debugging
+- Returned to the client as HTTP 500 with generic message (no SQL, file paths, or internal details)
+- Examples: database locked, connection pool exhausted, schema mismatch, corrupted index

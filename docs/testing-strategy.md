@@ -171,17 +171,20 @@ In GitHub Actions:
 # Run Phase 3 handler + unit tests (default)
 pnpm test
 
+# Run concurrency tests (must run separately due to SQLite locking)
+pnpm test:concurrency
+
 # Run service layer tests separately (to avoid SQLite locking)
 pnpm test:service
 
-# Run all tests (may have SQLite contention; use separately instead)
+# Run all tests together (may have SQLite contention; use separately instead)
 pnpm test:all
 
 # Run with watch mode
 pnpm test:watch
 
 # Run specific test file
-pnpm test tests/handlers/bookings.handler.test.ts
+pnpm vitest run tests/handlers/bookings.handler.test.ts
 
 # Run with verbose output
 pnpm test -- --reporter=verbose
@@ -189,14 +192,50 @@ pnpm test -- --reporter=verbose
 
 **None of these commands touch `prisma/dev.db`.**
 
+## Concurrency Testing
+
+Concurrency tests verify that the atomic operations and transaction logic correctly prevent race conditions under simultaneous booking requests. These tests must run **separately** from other tests due to SQLite's behavior under high contention.
+
+### Test Scenarios
+
+| Test | Purpose | Approach |
+|---|---|---|
+| Concurrent identical requests | Verify only one succeeds, other gets BOOKING_CONFLICT (409) | `Promise.allSettled()` on two identical booking calls |
+| Concurrent overlapping requests | Verify serialization when requests overlap same time slot | `Promise.allSettled()` on two overlapping booking calls |
+| Concurrent double-cancellations | Verify only one succeeds (200), other gets BOOKING_ALREADY_CANCELLED (409) | `Promise.allSettled()` on two identical cancel calls |
+| Cancellation + creation in freed slot | Verify both operations succeed (atomicity + ordering) | Sequential operations showing atomic transitions |
+| Different rooms at same time | Verify concurrent bookings succeed in different rooms | `Promise.allSettled()` on same time, different rooms |
+
+### SQLite Serialization Behavior
+
+SQLite uses **pessimistic locking with serialization**:
+
+1. Transaction 1 acquires WRITE lock on table
+2. Transaction 2 blocks waiting for lock release
+3. Transaction 1 commits, releases lock
+4. Transaction 2 acquires lock, re-executes query (sees Transaction 1's writes)
+5. Transaction 2 either succeeds or returns conflict
+
+**Key Insight**: Concurrent requests to the **same room** serialize and only one succeeds. Concurrent requests to **different rooms** can proceed in parallel.
+
+### Database Lock Warnings
+
+When running concurrency tests alongside other tests:
+- SQLite may report "database is locked" or transaction timeouts
+- This is **expected and normal behavior**
+- Solution: Run concurrency tests separately with `pnpm test:concurrency`
+- Once all transactions finish, the lock releases and other tests run fine
+
 ## Test Coverage
 
 | Category | Count | Status | Location |
 |---|---|---|---|
 | Unit (booking-rules) | 15+ | ✅ | `tests/booking-rules.test.ts` |
-| Handlers (HTTP API) | 23+ | ✅ | `tests/handlers/*.test.ts` |
+| Handlers (HTTP API) | 19+ | ✅ | `tests/handlers/bookings.handler.test.ts` |
+| Room handlers | 4+ | ✅ | `tests/handlers/rooms.handler.test.ts` |
+| Concurrency | 6+ | ✅ | `tests/handlers/concurrency.test.ts` |
 | Service Layer | 20+ | ✅ | `tests/service/*.test.ts` |
-| **Total** | **58+** | **✅ Passing** | All layers combined |
+| **Total** | **64+** | **✅ Passing** | All layers combined |
 
 **Default run** (`pnpm test`): 38 tests (handlers + unit)
 **Service run** (`pnpm test:service`): 20 tests (service layer)

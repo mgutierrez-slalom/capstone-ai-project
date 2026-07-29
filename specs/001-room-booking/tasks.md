@@ -158,6 +158,70 @@
 
 ---
 
+## Phase 8: Concurrency & Atomicity (Priority: P0 - Blocking)
+
+**Purpose**: Implement transaction ownership at persistence layer and ensure atomic operations prevent race conditions
+
+**Specification Status**: ✅ Phase 4 requirements fully implemented and tested
+
+- [x] T064 Refactor booking-repository.ts to own transaction lifecycle with function createBookingWithConflictCheck() that:
+  - Executes entire transaction internally (conflict detection, insert)
+  - Re-checks overlaps inside transaction (prevents race conditions)
+  - Returns Booking on success or null on conflict
+  - Throws infrastructure errors unchanged (lets handler convert to 500)
+- [x] T065 Implement atomic cancelBookingIfConfirmed() in booking-repository.ts using conditional UPDATE with WHERE status='CONFIRMED':
+  - Returns Booking on success or null if already cancelled/not found
+  - Throws infrastructure errors unchanged
+  - Guarantees only one concurrent cancellation succeeds
+- [x] T066 Refactor booking-service.ts to remove direct PrismaClient import and transaction management:
+  - Call repository functions for all persistence operations
+  - Map repository outcomes to domain errors (null → BOOKING_CONFLICT/BOOKING_ALREADY_CANCELLED)
+  - Throw infrastructure errors without catching (let handlers catch)
+  - Keep all domain validations as domain errors
+- [x] T067 Update HTTP handlers (src/app/api/bookings/route.ts and src/app/api/bookings/[id]/cancel/route.ts) to wrap service calls in try-catch:
+  - Catch infrastructure errors (Prisma, SQLite, I/O) → return HTTP 500
+  - Return domain errors from result object → appropriate 4xx status
+  - Never automatically classify infrastructure errors as domain errors
+- [x] T068 Create concurrency tests in tests/handlers/concurrency.test.ts with Promise.allSettled() for true simultaneous execution:
+  - Concurrent identical booking requests: verify only one succeeds, other gets BOOKING_CONFLICT (409)
+  - Concurrent overlapping bookings: verify serialization
+  - Concurrent double-cancellations: verify only one succeeds (200), other gets BOOKING_ALREADY_CANCELLED (409)
+  - Concurrent cancellation + creation in freed slot: verify both succeed atomically
+  - Same room serialization: concurrent bookings to same room at same time
+  - Different rooms parallelism: concurrent bookings to different rooms at same time both succeed
+- [x] T069 Document persistence boundary in docs/architecture.md with sections on:
+  - Transaction ownership at repository layer
+  - Atomic booking creation with conflict re-check
+  - Atomic cancellation with conditional update
+  - SQLite serialization behavior under concurrent writes
+  - Error classification (domain vs infrastructure)
+- [x] T070 Update docs/testing-strategy.md with concurrency section covering:
+  - Promise.allSettled() approach for true concurrent testing
+  - SQLite locking behavior and database lock warnings
+  - Separate test execution strategy (pnpm test:concurrency separate from other tests)
+  - Explanation of why concurrency tests must run separately (high contention on single database)
+- [x] T071 Update package.json test scripts to separate concurrency tests:
+  - `pnpm test`: runs handlers + unit tests (no concurrency tests)
+  - `pnpm test:concurrency`: runs concurrency tests separately
+  - `pnpm test:service`: runs service tests separately
+  - `pnpm test:all`: runs all tests (may have SQLite contention)
+- [x] T072 Run full validation: `pnpm lint; pnpm typecheck; pnpm test; pnpm test:concurrency; pnpm build`
+  - All handler/unit tests pass (38+)
+  - All concurrency tests pass (6+)
+  - No lint or typecheck errors
+  - Production build completes successfully
+- [x] T073 Verify concurrency outcomes:
+  - Concurrent identical booking requests: exactly one succeeds, other gets 409
+  - Only one concurrent cancellation succeeds
+  - Infrastructure errors never misclassified as BOOKING_CONFLICT
+  - Repository layer owns transactions
+  - Service layer does not import PrismaClient directly
+  - No database locks when tests run separately
+
+**Checkpoint**: Concurrency and atomicity fully implemented. System ready for production-scale concurrent load.
+
+---
+
 ## Task Dependencies & Execution Strategy
 
 ### Critical Path (Sequential)
@@ -200,7 +264,8 @@ Iteration 3: T052-T063 (Polish)
 - Phase 5 (US-004): 5 tasks
 - Phase 6 (US-005): 9 tasks
 - Phase 7 (Polish): 12 tasks
-- **Total**: 64 tasks
+- Phase 8 (Concurrency & Atomicity): 10 tasks (T064–T073)
+- **Total**: 74 tasks
 
 ### Test Coverage Summary
 
