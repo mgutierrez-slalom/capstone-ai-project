@@ -30,17 +30,18 @@ Pure function tests for booking business logic with no I/O or side effects:
 - Very short bookings accepted (1ms, 1s, 1min)
 - Near-4-hour boundaries tested (3h 59m 59s 999ms accepted, 4h 0m 0s 1ms rejected)
 
-### 2. Integration Tests: Booking Service & API
+### 2. Service Layer Tests: Business Logic & Database
 
-**File**: `tests/api/bookings.test.ts`
+**Files**: `tests/service/booking-service.test.ts`, `tests/service/room-repository.test.ts`
 
-Full stack tests exercising service layer + API endpoint handlers with real database:
+Integration tests exercising service layer with real database (test.db):
 
 - **Booking creation** — valid inputs, field validation, conflict detection
 - **Booking cancellation** — state transitions, idempotency checks
-- **Room isolation** — concurrent bookings in different rooms allowed
-- **Error handling** — correct HTTP status codes and error codes
-- **API response contracts** — all Booking responses include id, roomId, title, organizerName, startTime, endTime, status, createdAt, updatedAt
+- **Room operations** — listing, fetching by ID
+- **Conflict resolution** — concurrent bookings in different rooms allowed
+- **Error handling** — correct error codes and status codes
+- **API response contracts** — all Booking responses include all 9 fields
 
 **Key scenarios**:
 - Creating booking with empty/whitespace organizer or title (validation)
@@ -50,15 +51,34 @@ Full stack tests exercising service layer + API endpoint handlers with real data
 - Cancelling already-cancelled booking (409 error)
 - Cancelling non-existent booking (404 error)
 
-### 3. Room API Tests
+### 3. HTTP Handler Tests: API Endpoints
 
-**File**: `tests/api/rooms.test.ts`
+**File**: `tests/handlers/bookings.handler.test.ts`, `tests/handlers/rooms.handler.test.ts`
 
-Verify room listing API behavior:
+Direct invocation of Next.js route handlers to verify HTTP API behavior:
 
-- Returns all seeded rooms
-- Ordered alphabetically by name
-- Each room includes id, name, capacity, location
+- **GET /api/rooms** — returns 200 with all rooms sorted alphabetically
+- **GET /api/bookings** — returns 200 with only CONFIRMED bookings, sorted by startTime
+- **POST /api/bookings** — returns 201 with complete created Booking, verifies all validation rules
+- **POST /api/bookings/{id}/cancel** — returns 200 with cancelled Booking, handles 404/409 errors
+
+**What's tested**:
+- HTTP status codes (200, 201, 400, 404, 409, 422, 500)
+- Response shapes match OpenAPI contract
+- Request validation (empty fields, invalid types, malformed JSON)
+- Error responses include code, message, and optional field
+- Timestamps are valid ISO 8601 strings
+- Text field trimming (whitespace removed)
+- 4-hour maximum duration boundary (exactly 4h accepted, 4h 0m 0s 1ms rejected)
+- Overlap detection across rooms
+- State transitions (CONFIRMED → CANCELLED)
+- Database isolation (uses test.db, not dev.db)
+
+**Test fixtures**:
+- Uses deterministic future timestamps (2026-08-15T...)
+- Seeded test rooms (Orion, Andromeda, Apollo) from `tests/setup.ts`
+- `beforeEach` clears bookings; rooms remain for next test
+- No relative dates or "now ± N hours" (ensures reproducibility)
 
 ## Test Database Isolation
 
@@ -148,14 +168,20 @@ In GitHub Actions:
 ## Running Tests Locally
 
 ```bash
-# Run all tests (uses isolated test.db)
+# Run Phase 3 handler + unit tests (default)
 pnpm test
+
+# Run service layer tests separately (to avoid SQLite locking)
+pnpm test:service
+
+# Run all tests (may have SQLite contention; use separately instead)
+pnpm test:all
 
 # Run with watch mode
 pnpm test:watch
 
 # Run specific test file
-pnpm test tests/booking-rules.test.ts
+pnpm test tests/handlers/bookings.handler.test.ts
 
 # Run with verbose output
 pnpm test -- --reporter=verbose
@@ -165,12 +191,16 @@ pnpm test -- --reporter=verbose
 
 ## Test Coverage
 
-| Category | Count | Status |
-|---|---|---|
-| Unit (booking-rules) | 15+ | ✅ |
-| Integration (bookings API) | 15+ | ✅ |
-| Room API | 3+ | ✅ |
-| **Total** | **35+** | **✅ Passing** |
+| Category | Count | Status | Location |
+|---|---|---|---|
+| Unit (booking-rules) | 15+ | ✅ | `tests/booking-rules.test.ts` |
+| Handlers (HTTP API) | 23+ | ✅ | `tests/handlers/*.test.ts` |
+| Service Layer | 20+ | ✅ | `tests/service/*.test.ts` |
+| **Total** | **58+** | **✅ Passing** | All layers combined |
+
+**Default run** (`pnpm test`): 38 tests (handlers + unit)
+**Service run** (`pnpm test:service`): 20 tests (service layer)
+**All** (`pnpm test:all`): 58+ tests (all layers, run separately for best results)
 
 ## Future Enhancements
 

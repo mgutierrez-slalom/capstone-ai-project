@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as roomRepo from '@/lib/prisma/room-repository';
 
-describe('GET /api/rooms', () => {
-  it('returns all seeded rooms sorted by name', async () => {
+describe('Room Repository Tests', () => {
+  it('getAllRooms returns all seeded rooms sorted by name', async () => {
     const rooms = await roomRepo.getAllRooms();
 
     expect(Array.isArray(rooms)).toBe(true);
@@ -33,5 +33,22 @@ describe('GET /api/rooms', () => {
     expect(apollo).toBeDefined();
     expect(apollo?.capacity).toBe(12);
     expect(apollo?.location).toBe('Floor 3');
+  });
+
+  it('getRoomById returns room with correct attributes', async () => {
+    const allRooms = await roomRepo.getAllRooms();
+    expect(allRooms.length).toBeGreaterThan(0);
+
+    const room = await roomRepo.getRoomById(allRooms[0].id);
+    expect(room).toBeDefined();
+    expect(room?.id).toBe(allRooms[0].id);
+    expect(room?.name).toBeDefined();
+    expect(room?.capacity).toBeGreaterThan(0);
+    expect(room?.location).toBeDefined();
+  });
+
+  it('getRoomById returns null for unknown room', async () => {
+    const room = await roomRepo.getRoomById('nonexistent-id-xyz');
+    expect(room).toBeNull();
   });
 });

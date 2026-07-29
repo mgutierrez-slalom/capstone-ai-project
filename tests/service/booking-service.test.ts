@@ -3,7 +3,7 @@ import { createBooking, cancelBooking } from '@/lib/booking/booking-service';
 import * as bookingRepo from '@/lib/prisma/booking-repository';
 import * as roomRepo from '@/lib/prisma/room-repository';
 
-describe('Booking Integration Tests', () => {
+describe('Booking Service Integration Tests', () => {
   let orionRoom: { id: string; name: string };
 
   beforeAll(async () => {
@@ -12,7 +12,7 @@ describe('Booking Integration Tests', () => {
     orionRoom = room;
   });
 
-  describe('POST /api/bookings', () => {
+  describe('createBooking()', () => {
     it('creates a valid booking with all constraints (AC-001)', async () => {
       const startTime = new Date();
       startTime.setHours(startTime.getHours() + 24); // 24 hours from now
@@ -38,6 +38,7 @@ describe('Booking Integration Tests', () => {
         expect(result.booking.startTime).toEqual(startTime);
         expect(result.booking.endTime).toEqual(endTime);
         expect(result.booking.createdAt).toBeDefined();
+        expect(result.booking.updatedAt).toBeDefined();
       }
     });
 
@@ -264,7 +265,7 @@ describe('Booking Integration Tests', () => {
       }
     });
 
-    it('allows concurrent bookings in different rooms at same time', async () => {
+    it('allows bookings in different rooms at same time', async () => {
       // Get two different rooms
       const allRooms = await roomRepo.getAllRooms();
       if (allRooms.length < 2) {
@@ -279,7 +280,7 @@ describe('Booking Integration Tests', () => {
       const endTime = new Date(startTime);
       endTime.setHours(endTime.getHours() + 1);
 
-      // Create booking in first room
+      // Create booking in first room (sequential, not concurrent)
       const res1 = await createBooking({
         roomId: room1.id,
         organizerName: 'Paul',
@@ -362,7 +363,7 @@ describe('Booking Integration Tests', () => {
     });
   });
 
-  describe('GET /api/bookings', () => {
+  describe('getAllConfirmedBookings()', () => {
     it('returns all CONFIRMED bookings sorted by startTime', async () => {
       const bookings = await bookingRepo.getAllConfirmedBookings();
 
@@ -379,7 +380,7 @@ describe('Booking Integration Tests', () => {
     });
   });
 
-  describe('POST /api/bookings/{id}/cancel', () => {
+  describe('cancelBooking()', () => {
     it('cancels a confirmed booking (AC-005)', async () => {
       // Create booking
       const startTime = new Date();
@@ -402,6 +403,7 @@ describe('Booking Integration Tests', () => {
         if (result.success) {
           expect(result.booking.status).toBe('CANCELLED');
           expect(result.booking.id).toBe(createRes.booking.id);
+          expect(result.booking.updatedAt).toBeDefined();
         }
       }
     });
