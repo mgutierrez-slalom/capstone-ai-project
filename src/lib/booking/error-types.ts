@@ -4,7 +4,9 @@ export type ErrorCode =
   | 'BOOKING_CONFLICT'
   | 'MAX_DURATION_EXCEEDED'
   | 'ROOM_NOT_FOUND'
-  | 'INVALID_INPUT';
+  | 'INVALID_INPUT'
+  | 'BOOKING_NOT_FOUND'
+  | 'BOOKING_ALREADY_CANCELLED';
 
 export interface ValidationError {
   code: ErrorCode;
@@ -25,6 +27,8 @@ export function createError(
     MAX_DURATION_EXCEEDED: 400,
     ROOM_NOT_FOUND: 400,
     INVALID_INPUT: 400,
+    BOOKING_NOT_FOUND: 404,
+    BOOKING_ALREADY_CANCELLED: 409,
   };
 
   return {

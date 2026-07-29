@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RoomFlow — Meeting Room Booking
 
-## Getting Started
+RoomFlow is a lightweight meeting-room booking application. Users can view available rooms, create reservations with automatic conflict detection, view existing bookings, and cancel reservations.
 
-First, run the development server:
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript (strict) |
+| Styling | Tailwind CSS v4 |
+| ORM | Prisma v7 |
+| Database | SQLite (via `better-sqlite3` driver adapter) |
+| Testing | Vitest |
+
+## Setup
+
+**Prerequisites**: Node.js 20+, pnpm
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. Install dependencies
+pnpm install
+
+# 2. Copy environment file
+cp .env.example .env.local
+
+# 3. Run database migration
+pnpm db:migrate
+
+# 4. Seed rooms (Orion, Andromeda, Apollo)
+pnpm db:seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Running the Dev Server
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Learn More
+## Quality Gates
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm lint        # ESLint
+pnpm typecheck   # TypeScript strict type-check (no emit)
+pnpm test        # Vitest unit + integration tests
+pnpm build       # Next.js production build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+All four gates must pass before merging changes.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── rooms/           # GET /api/rooms
+│   │   └── bookings/        # GET+POST /api/bookings, POST /api/bookings/[id]/cancel
+│   ├── bookings/new/        # Booking form page
+│   └── page.tsx             # Room list + booking list home page
+├── components/
+│   ├── RoomList.tsx
+│   ├── BookingList.tsx
+│   └── BookingForm.tsx
+└── lib/
+    ├── booking/             # Domain rules and service (business logic)
+    │   ├── booking-rules.ts
+    │   ├── booking-service.ts
+    │   └── error-types.ts
+    └── prisma/              # Data access layer
+        ├── client.ts
+        ├── room-repository.ts
+        └── booking-repository.ts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+prisma/
+├── schema.prisma
+├── seed.ts
+└── migrations/
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+tests/
+├── booking-rules.test.ts    # Unit tests for domain rules
+└── api/
+    └── bookings.test.ts     # Integration tests for API endpoints
+```
+
+## Database
+
+Uses SQLite with the Prisma `better-sqlite3` driver adapter. The database file is created at the path specified by `DATABASE_URL` in `.env.local` (default: `file:./dev.db`).
+
+To open Prisma Studio:
+
+```bash
+pnpm db:studio
+```
+
+## Documentation
+
+- [Architecture](docs/architecture.md) — Layer overview and design decisions
+- [Booking Rules](docs/booking-rules.md) — Business rules and conflict detection logic
+- [Specification](specs/001-room-booking/spec.md) — Feature specification

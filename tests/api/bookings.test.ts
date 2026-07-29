@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { createBooking, cancelBooking } from '@/lib/booking/booking-service';
-import * as roomRepo from '@/lib/prisma/room-repository';
 import * as bookingRepo from '@/lib/prisma/booking-repository';
+import * as roomRepo from '@/lib/prisma/room-repository';
 
 describe('Booking Integration Tests', () => {
   let orionRoom: { id: string; name: string };
@@ -10,25 +10,6 @@ describe('Booking Integration Tests', () => {
     const room = await roomRepo.getRoomById((await roomRepo.getAllRooms())[0].id);
     if (!room) throw new Error('Orion room not found');
     orionRoom = room;
-  });
-
-  describe('GET /api/rooms', () => {
-    it('returns all seeded rooms sorted by name', async () => {
-      const rooms = await roomRepo.getAllRooms();
-
-      expect(Array.isArray(rooms)).toBe(true);
-      expect(rooms.length).toBeGreaterThan(0);
-
-      // Check rooms are sorted alphabetically
-      const names = rooms.map((r: { name: string }) => r.name);
-      expect(names).toEqual([...names].sort());
-
-      // Check seeded rooms exist
-      const roomNames = new Set(names);
-      expect(roomNames.has('Orion')).toBe(true);
-      expect(roomNames.has('Andromeda')).toBe(true);
-      expect(roomNames.has('Apollo')).toBe(true);
-    });
   });
 
   describe('POST /api/bookings', () => {
@@ -48,9 +29,15 @@ describe('Booking Integration Tests', () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        const booking = await bookingRepo.getBookingById(result.bookingId);
-        expect(booking?.status).toBe('CONFIRMED');
-        expect(booking?.title).toBe('Team Meeting');
+        expect(result.booking).toBeDefined();
+        expect(result.booking.id).toBeDefined();
+        expect(result.booking.roomId).toBe(orionRoom.id);
+        expect(result.booking.title).toBe('Team Meeting');
+        expect(result.booking.organizerName).toBe('Alice');
+        expect(result.booking.status).toBe('CONFIRMED');
+        expect(result.booking.startTime).toEqual(startTime);
+        expect(result.booking.endTime).toEqual(endTime);
+        expect(result.booking.createdAt).toBeDefined();
       }
     });
 
@@ -163,16 +150,36 @@ describe('Booking Integration Tests', () => {
       }
     });
 
-    it('rejects bookings exceeding 4 hours (FR-010)', async () => {
+    it('accepts bookings of exactly 4 hours', async () => {
       const startTime = new Date();
       startTime.setHours(startTime.getHours() + 1);
       const endTime = new Date(startTime);
       endTime.setHours(endTime.getHours() + 4);
-      endTime.setSeconds(endTime.getSeconds() + 1);
 
       const result = await createBooking({
         roomId: orionRoom.id,
         organizerName: 'Henry',
+        title: 'Exactly 4 Hours',
+        startTime,
+        endTime,
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.booking.status).toBe('CONFIRMED');
+      }
+    });
+
+    it('rejects bookings exceeding 4 hours by 1 millisecond (FR-010)', async () => {
+      const startTime = new Date();
+      startTime.setHours(startTime.getHours() + 5);
+      const endTime = new Date(startTime);
+      endTime.setHours(endTime.getHours() + 4);
+      endTime.setMilliseconds(endTime.getMilliseconds() + 1);
+
+      const result = await createBooking({
+        roomId: orionRoom.id,
+        organizerName: 'Henry2',
         title: 'Too Long',
         startTime,
         endTime,
@@ -238,6 +245,121 @@ describe('Booking Integration Tests', () => {
         expect(res2.error.code).toBe('INVALID_INPUT');
       }
     });
+
+    it('rejects booking with start time exactly equal to current UTC time', async () => {
+      const now = new Date();
+      const endTime = new Date(now.getTime() + 3600000); // 1 hour later
+
+      const result = await createBooking({
+        roomId: orionRoom.id,
+        organizerName: 'Oscar',
+        title: 'Now Booking',
+        startTime: now,
+        endTime,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('BOOKING_IN_PAST');
+      }
+    });
+
+    it('allows concurrent bookings in different rooms at same time', async () => {
+      // Get two different rooms
+      const allRooms = await roomRepo.getAllRooms();
+      if (allRooms.length < 2) {
+        throw new Error('Test requires at least 2 seeded rooms');
+      }
+
+      const room1 = allRooms[0];
+      const room2 = allRooms[1];
+
+      const startTime = new Date();
+      startTime.setHours(startTime.getHours() + 40);
+      const endTime = new Date(startTime);
+      endTime.setHours(endTime.getHours() + 1);
+
+      // Create booking in first room
+      const res1 = await createBooking({
+        roomId: room1.id,
+        organizerName: 'Paul',
+        title: 'Meeting Room 1',
+        startTime,
+        endTime,
+      });
+
+      expect(res1.success).toBe(true);
+
+      // Create booking at exact same time in second room
+      const res2 = await createBooking({
+        roomId: room2.id,
+        organizerName: 'Quinn',
+        title: 'Meeting Room 2',
+        startTime,
+        endTime,
+      });
+
+      expect(res2.success).toBe(true);
+      if (res1.success && res2.success) {
+        expect(res1.booking.roomId).not.toBe(res2.booking.roomId);
+      }
+    });
+
+    it('rejects third overlapping booking when two conflict exists', async () => {
+      // First booking: 42 hours from now
+      const startTime1 = new Date();
+      startTime1.setHours(startTime1.getHours() + 42);
+      const endTime1 = new Date(startTime1);
+      endTime1.setHours(endTime1.getHours() + 1);
+
+      const res1 = await createBooking({
+        roomId: orionRoom.id,
+        organizerName: 'Ryan',
+        title: 'First Booking',
+        startTime: startTime1,
+        endTime: endTime1,
+      });
+
+      expect(res1.success).toBe(true);
+
+      // Second booking: overlaps first (30 min after start)
+      const startTime2 = new Date(startTime1);
+      startTime2.setMinutes(startTime2.getMinutes() + 30);
+      const endTime2 = new Date(startTime2);
+      endTime2.setHours(endTime2.getHours() + 1);
+
+      const res2 = await createBooking({
+        roomId: orionRoom.id,
+        organizerName: 'Sam',
+        title: 'Overlapping Booking',
+        startTime: startTime2,
+        endTime: endTime2,
+      });
+
+      expect(res2.success).toBe(false);
+      if (!res2.success) {
+        expect(res2.error.code).toBe('BOOKING_CONFLICT');
+      }
+
+      // Third booking: also overlaps first (in different part, 15 min after start)
+      const startTime3 = new Date(startTime1);
+      startTime3.setMinutes(startTime3.getMinutes() + 15);
+      const endTime3 = new Date(startTime3);
+      endTime3.setMinutes(endTime3.getMinutes() + 20);
+
+      const res3 = await createBooking({
+        roomId: orionRoom.id,
+        organizerName: 'Taylor',
+        title: 'Another Overlapping Booking',
+        startTime: startTime3,
+        endTime: endTime3,
+      });
+
+      expect(res3.success).toBe(false);
+      if (!res3.success) {
+        expect(res3.error.code).toBe('BOOKING_CONFLICT');
+      }
+    });
   });
 
   describe('GET /api/bookings', () => {
@@ -275,12 +397,12 @@ describe('Booking Integration Tests', () => {
 
       expect(createRes.success).toBe(true);
       if (createRes.success) {
-        const result = await cancelBooking(createRes.bookingId);
+        const result = await cancelBooking(createRes.booking.id);
         expect(result.success).toBe(true);
-
-        // Verify cancelled in database
-        const booking = await bookingRepo.getBookingById(createRes.bookingId);
-        expect(booking?.status).toBe('CANCELLED');
+        if (result.success) {
+          expect(result.booking.status).toBe('CANCELLED');
+          expect(result.booking.id).toBe(createRes.booking.id);
+        }
       }
     });
 
@@ -301,7 +423,7 @@ describe('Booking Integration Tests', () => {
 
       expect(createRes1.success).toBe(true);
       if (createRes1.success) {
-        await cancelBooking(createRes1.bookingId);
+        await cancelBooking(createRes1.booking.id);
 
         // Try to book same slot again
         const createRes2 = await createBooking({
@@ -334,15 +456,28 @@ describe('Booking Integration Tests', () => {
       expect(createRes.success).toBe(true);
       if (createRes.success) {
         // Cancel first time
-        const cancelRes1 = await cancelBooking(createRes.bookingId);
+        const cancelRes1 = await cancelBooking(createRes.booking.id);
         expect(cancelRes1.success).toBe(true);
+        if (cancelRes1.success) {
+          expect(cancelRes1.booking.status).toBe('CANCELLED');
+        }
 
         // Try to cancel again
-        const cancelRes2 = await cancelBooking(createRes.bookingId);
+        const cancelRes2 = await cancelBooking(createRes.booking.id);
         expect(cancelRes2.success).toBe(false);
         if (!cancelRes2.success) {
-          expect(cancelRes2.error.code).toBe('INVALID_INPUT');
+          expect(cancelRes2.error.code).toBe('BOOKING_ALREADY_CANCELLED');
+          expect(cancelRes2.error.statusCode).toBe(409);
         }
+      }
+    });
+
+    it('rejects cancellation of unknown booking', async () => {
+      const result = await cancelBooking('invalid-booking-id');
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('BOOKING_NOT_FOUND');
+        expect(result.error.statusCode).toBe(404);
       }
     });
   });

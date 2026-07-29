@@ -15,9 +15,20 @@ export interface CreateBookingRequest {
   endTime: Date;
 }
 
+export type Booking = {
+  id: string;
+  roomId: string;
+  title: string;
+  organizerName: string;
+  startTime: Date;
+  endTime: Date;
+  status: 'CONFIRMED' | 'CANCELLED';
+  createdAt: Date;
+};
+
 export async function createBooking(
   request: CreateBookingRequest,
-): Promise<{ success: true; bookingId: string } | { success: false; error: ValidationError }> {
+): Promise<{ success: true; booking: Booking } | { success: false; error: ValidationError }> {
   // Validate string fields
   const organizerName = request.organizerName.trim();
   const title = request.title.trim();
@@ -36,6 +47,13 @@ export async function createBooking(
     };
   }
 
+  if (!request.roomId) {
+    return {
+      success: false,
+      error: createError('INVALID_INPUT', 'Room ID is required', 'roomId'),
+    };
+  }
+
   // Validate time range
   const timeRange = { startTime: request.startTime, endTime: request.endTime };
 
@@ -45,6 +63,7 @@ export async function createBooking(
       error: createError(
         'INVALID_TIME_RANGE',
         'End time must be after start time',
+        'endTime',
       ),
     };
   }
@@ -54,7 +73,7 @@ export async function createBooking(
   if (request.startTime <= now) {
     return {
       success: false,
-      error: createError('BOOKING_IN_PAST', 'Start time must be in the future'),
+      error: createError('BOOKING_IN_PAST', 'Start time must be in the future', 'startTime'),
     };
   }
 
@@ -65,6 +84,7 @@ export async function createBooking(
       error: createError(
         'MAX_DURATION_EXCEEDED',
         'Booking duration cannot exceed 4 hours',
+        'endTime',
       ),
     };
   }
@@ -116,7 +136,16 @@ export async function createBooking(
 
       return {
         success: true as const,
-        bookingId: booking.id,
+        booking: {
+          id: booking.id,
+          roomId: booking.roomId,
+          title: booking.title,
+          organizerName: booking.organizerName,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          status: booking.status,
+          createdAt: booking.createdAt,
+        },
       };
     });
 
@@ -132,24 +161,37 @@ export async function createBooking(
 
 export async function cancelBooking(bookingId: string): Promise<{
   success: true;
+  booking: Booking;
 } | { success: false; error: ValidationError }> {
   const booking = await bookingRepo.getBookingById(bookingId);
 
   if (!booking) {
     return {
       success: false,
-      error: createError('INVALID_INPUT', 'Booking not found'),
+      error: createError('BOOKING_NOT_FOUND', 'Booking not found'),
     };
   }
 
   if (booking.status === 'CANCELLED') {
     return {
       success: false,
-      error: createError('INVALID_INPUT', 'Booking is already cancelled'),
+      error: createError('BOOKING_ALREADY_CANCELLED', 'Booking is already cancelled'),
     };
   }
 
-  await bookingRepo.cancelBooking(bookingId);
+  const cancelled = await bookingRepo.cancelBooking(bookingId);
 
-  return { success: true };
+  return {
+    success: true as const,
+    booking: {
+      id: cancelled.id,
+      roomId: cancelled.roomId,
+      title: cancelled.title,
+      organizerName: cancelled.organizerName,
+      startTime: cancelled.startTime,
+      endTime: cancelled.endTime,
+      status: cancelled.status,
+      createdAt: cancelled.createdAt,
+    },
+  };
 }

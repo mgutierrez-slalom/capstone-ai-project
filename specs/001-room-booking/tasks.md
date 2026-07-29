@@ -143,16 +143,16 @@
 
 **Purpose**: Quality gates, testing completeness, documentation, and CI/CD setup
 
-- [ ] T052 Run full test suite: `pnpm test` passes with coverage for all critical rules (overlap, duration, consecutive, cancellation reuse, empty states, string validation, room-not-found)
-- [ ] T053 Run type checking: `pnpm typecheck` passes with no errors
-- [ ] T054 Run linting: `pnpm lint` passes with no errors
-- [ ] T055 Run build: `pnpm build` completes successfully with no errors
-- [ ] T056 Create GitHub Actions CI workflow in .github/workflows/ci.yml that runs lint, typecheck, test, build on every push
-- [ ] T057 Add environment configuration management (.env.example, .env.local) for database URL and app settings
-- [ ] T058 Update README.md with project overview, tech stack, setup instructions, running dev server, and quality gate commands
-- [ ] T059 Add architectural documentation in docs/architecture.md covering layers (presentation, service, domain, persistence)
-- [ ] T060 Document booking business rules and conflict detection in docs/booking-rules.md
-- [ ] T061 Verify all repository instructions followed: strict TypeScript, business rules in lib/booking, persistence in lib/prisma, thin handlers
+- [x] T052 Run full test suite: `pnpm test` passes with coverage for all critical rules (overlap, duration, consecutive, cancellation reuse, empty states, string validation, room-not-found)
+- [x] T053 Run type checking: `pnpm typecheck` passes with no errors
+- [x] T054 Run linting: `pnpm lint` passes with no errors
+- [x] T055 Run build: `pnpm build` completes successfully with no errors
+- [x] T056 Create GitHub Actions CI workflow in .github/workflows/ci.yml that runs lint, typecheck, test, build on every push
+- [x] T057 Add environment configuration management (.env.example, .env.local) for database URL and app settings
+- [x] T058 Update README.md with project overview, tech stack, setup instructions, running dev server, and quality gate commands
+- [x] T059 Add architectural documentation in docs/architecture.md covering layers (presentation, service, domain, persistence)
+- [x] T060 Document booking business rules and conflict detection in docs/booking-rules.md
+- [x] T061 Verify all repository instructions followed: strict TypeScript, business rules in lib/booking, persistence in lib/prisma, thin handlers
 - [ ] T062 Final validation: manually test all user stories end-to-end (room list alphabetical sort → create booking with all validations → view bookings sorted → cancel booking)
 - [ ] T063 Verify acceptance criteria met for all user stories (AC-001 through AC-008 including empty states and room-not-found)
 

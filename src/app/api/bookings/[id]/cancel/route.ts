@@ -11,12 +11,12 @@ export async function POST(
 
     if (!result.success) {
       return Response.json(
-        { code: result.error.code, message: result.error.message },
+        { code: result.error.code, message: result.error.message, field: result.error.field },
         { status: result.error.statusCode },
       );
     }
 
-    return Response.json({ success: true }, { status: 200 });
+    return Response.json(result.booking, { status: 200 });
   } catch (error) {
     console.error('Cancellation error:', error);
     return Response.json(

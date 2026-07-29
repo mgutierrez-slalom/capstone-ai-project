@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return Response.json({ bookingId: result.bookingId }, { status: 201 });
+    return Response.json(result.booking, { status: 201 });
   } catch (error) {
     console.error('Booking creation error:', error);
     return Response.json(
