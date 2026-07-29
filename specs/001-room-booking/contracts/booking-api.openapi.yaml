@@ -18,6 +18,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Room'
+        '500':
+          description: Unexpected server error (for example database or transaction failure)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/bookings:
     get:
       summary: List confirmed bookings

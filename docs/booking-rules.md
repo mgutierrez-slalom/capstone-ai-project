@@ -94,4 +94,4 @@ Cancellation is a status transition from `CONFIRMED` to `CANCELLED`. The booking
 | `ROOM_NOT_FOUND` | 400 | `roomId` does not match any room |
 | `INVALID_INPUT` | 400 | Empty/whitespace `title` or `organizerName` |
 | `BOOKING_CONFLICT` | 409 | Overlaps an existing CONFIRMED booking |
-| `ALREADY_CANCELLED` | 409 | Attempting to cancel an already-cancelled booking |
+| `BOOKING_ALREADY_CANCELLED` | 409 | Attempting to cancel an already-cancelled booking |

@@ -180,7 +180,7 @@ export function BookingForm() {
               setFormData((prev) => ({ ...prev, roomId: e.target.value }));
               setErrors((prev) => ({ ...prev, roomId: '' }));
             }}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
               errors.roomId ? 'border-red-500' : 'border-gray-300'
             }`}
           >
@@ -207,7 +207,7 @@ export function BookingForm() {
               setErrors((prev) => ({ ...prev, organizerName: '' }));
             }}
             placeholder="Your name"
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 ${
               errors.organizerName ? 'border-red-500' : 'border-gray-300'
             }`}
           />
@@ -227,7 +227,7 @@ export function BookingForm() {
               setErrors((prev) => ({ ...prev, title: '' }));
             }}
             placeholder="e.g. Team Standup"
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 ${
               errors.title ? 'border-red-500' : 'border-gray-300'
             }`}
           />
@@ -246,7 +246,7 @@ export function BookingForm() {
               setFormData((prev) => ({ ...prev, startTime: e.target.value }));
               setErrors((prev) => ({ ...prev, startTime: '' }));
             }}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
               errors.startTime ? 'border-red-500' : 'border-gray-300'
             }`}
           />
@@ -265,7 +265,7 @@ export function BookingForm() {
               setFormData((prev) => ({ ...prev, endTime: e.target.value }));
               setErrors((prev) => ({ ...prev, endTime: '' }));
             }}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
               errors.endTime ? 'border-red-500' : 'border-gray-300'
             }`}
           />

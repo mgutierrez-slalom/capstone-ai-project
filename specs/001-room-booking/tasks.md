@@ -153,8 +153,8 @@
 - [x] T059 Add architectural documentation in docs/architecture.md covering layers (presentation, service, domain, persistence)
 - [x] T060 Document booking business rules and conflict detection in docs/booking-rules.md
 - [x] T061 Verify all repository instructions followed: strict TypeScript, business rules in lib/booking, persistence in lib/prisma, thin handlers
-- [ ] T062 Final validation: manually test all user stories end-to-end (room list alphabetical sort → create booking with all validations → view bookings sorted → cancel booking)
-- [ ] T063 Verify acceptance criteria met for all user stories (AC-001 through AC-008 including empty states and room-not-found)
+- [x] T062 Final validation: manually test all user stories end-to-end (room list alphabetical sort → create booking with all validations → view bookings sorted → cancel booking)
+- [x] T063 Verify acceptance criteria met for all user stories (AC-001 through AC-008 including empty states and room-not-found)
 
 ---
 

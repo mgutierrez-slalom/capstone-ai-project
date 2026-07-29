@@ -1,7 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GET } from '@/app/api/rooms/route';
+import * as roomRepo from '@/lib/prisma/room-repository';
 
 describe('GET /api/rooms (Handler)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   it('returns HTTP 200 with all rooms sorted alphabetically', async () => {
     const response = (await GET()) as Response;
 
@@ -55,4 +63,54 @@ describe('GET /api/rooms (Handler)', () => {
       expect(typeof room.location).toBe('string');
     }
   });
+
+  it('returns HTTP 500 when repository throws infrastructure error', async () => {
+    // Mock the repository to throw a Prisma/database error
+    vi.spyOn(roomRepo, 'getAllRooms').mockRejectedValue(
+      new Error('Database connection failed'),
+    );
+
+    const response = (await GET()) as Response;
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get('content-type')).toContain('application/json');
+
+    const error = await response.json();
+    expect(error).toHaveProperty('code');
+    expect(error).toHaveProperty('message');
+    expect(error.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(error.message).toBe('An unexpected error occurred');
+  });
+
+  it('does not expose internal error details in 500 response', async () => {
+    // Mock a detailed error with sensitive info
+    const detailedError = new Error('Connection refused to sqlite:///var/app/db.sqlite');
+    vi.spyOn(roomRepo, 'getAllRooms').mockRejectedValue(detailedError);
+
+    const response = (await GET()) as Response;
+    const error = await response.json();
+
+    // Verify error message is generic, not the detailed error
+    expect(error.message).toBe('An unexpected error occurred');
+    expect(error.message).not.toContain('sqlite');
+    expect(error.message).not.toContain('Connection');
+    expect(error.message).not.toContain('/var/app');
+  });
+
+  it('returns error in the established API error schema', async () => {
+    vi.spyOn(roomRepo, 'getAllRooms').mockRejectedValue(new Error('DB error'));
+
+    const response = (await GET()) as Response;
+    const error = await response.json();
+
+    // Verify response matches ApiError schema
+    expect(error).toEqual({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'An unexpected error occurred',
+    });
+
+    // Verify only expected fields are present (no stack trace, etc.)
+    expect(Object.keys(error).sort()).toEqual(['code', 'message']);
+  });
 });
+
