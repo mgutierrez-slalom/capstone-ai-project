@@ -71,7 +71,7 @@ describe('GET /api/bookings (Handler)', () => {
     const time2 = new Date('2026-08-15T10:00:00Z');
 
     // Create second booking first (reverse order)
-    await prisma.booking.create({
+    const booking1 = await prisma.booking.create({
       data: {
         roomId,
         organizerName: 'Bob',
@@ -81,9 +81,11 @@ describe('GET /api/bookings (Handler)', () => {
         status: 'CONFIRMED',
       },
     });
+    expect(booking1).toBeDefined();
+    expect(booking1.id).toBeTruthy();
 
     // Create first booking second
-    await prisma.booking.create({
+    const booking2 = await prisma.booking.create({
       data: {
         roomId,
         organizerName: 'Alice',
@@ -93,6 +95,8 @@ describe('GET /api/bookings (Handler)', () => {
         status: 'CONFIRMED',
       },
     });
+    expect(booking2).toBeDefined();
+    expect(booking2.id).toBeTruthy();
 
     const response = (await GET()) as Response;
     const bookings = await response.json();
