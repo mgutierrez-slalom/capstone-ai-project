@@ -24,6 +24,7 @@ export type Booking = {
   endTime: Date;
   status: 'CONFIRMED' | 'CANCELLED';
   createdAt: Date;
+  updatedAt: Date;
 };
 
 export async function createBooking(
@@ -145,6 +146,7 @@ export async function createBooking(
           endTime: booking.endTime,
           status: booking.status,
           createdAt: booking.createdAt,
+          updatedAt: booking.updatedAt,
         },
       };
     });
@@ -152,10 +154,7 @@ export async function createBooking(
     return result;
   } catch (error) {
     console.error('Booking creation error:', error);
-    return {
-      success: false,
-      error: createError('BOOKING_CONFLICT', 'Unable to create booking at this time'),
-    };
+    throw error;
   }
 }
 
@@ -192,6 +191,7 @@ export async function cancelBooking(bookingId: string): Promise<{
       endTime: cancelled.endTime,
       status: cancelled.status,
       createdAt: cancelled.createdAt,
+      updatedAt: cancelled.updatedAt,
     },
   };
 }

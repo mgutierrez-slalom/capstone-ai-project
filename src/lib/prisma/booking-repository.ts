@@ -27,7 +27,6 @@ export async function getConfirmedBookingsForRoom(roomId: string, startTime: Dat
 export async function getBookingById(bookingId: string) {
   return prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { room: true },
   });
 }
 
@@ -35,7 +34,6 @@ export async function getAllConfirmedBookings() {
   return prisma.booking.findMany({
     where: { status: 'CONFIRMED' },
     orderBy: { startTime: 'asc' },
-    include: { room: true },
   });
 }
 
@@ -49,7 +47,6 @@ export async function createBooking(input: CreateBookingInput) {
       endTime: input.endTime,
       status: 'CONFIRMED',
     },
-    include: { room: true },
   });
 }
 
@@ -57,6 +54,5 @@ export async function cancelBooking(bookingId: string) {
   return prisma.booking.update({
     where: { id: bookingId },
     data: { status: 'CANCELLED' as BookingStatus },
-    include: { room: true },
   });
 }

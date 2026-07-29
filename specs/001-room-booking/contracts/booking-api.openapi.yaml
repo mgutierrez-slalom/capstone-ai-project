@@ -20,11 +20,11 @@ paths:
                   $ref: '#/components/schemas/Room'
   /api/bookings:
     get:
-      summary: List bookings
-      description: Returns all bookings ordered by startTime (ascending). No filtering available in MVP scope.
+      summary: List confirmed bookings
+      description: Returns only CONFIRMED bookings ordered by startTime (ascending). Cancelled bookings are excluded. No filtering available in MVP scope.
       responses:
         '200':
-          description: Booking list ordered by start time ascending
+          description: Confirmed bookings list ordered by start time ascending
           content:
             application/json:
               schema:
@@ -64,6 +64,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Unexpected server error (for example database or transaction failure)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/bookings/{id}/cancel:
     post:
       summary: Cancel booking
@@ -88,6 +94,12 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '409':
           description: Booking already cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Unexpected server error (for example database or transaction failure)
           content:
             application/json:
               schema:

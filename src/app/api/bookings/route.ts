@@ -28,10 +28,10 @@ export async function POST(request: Request) {
 
     return Response.json(result.booking, { status: 201 });
   } catch (error) {
-    console.error('Booking creation error:', error);
+    console.error('POST /api/bookings error:', error);
     return Response.json(
-      { code: 'INVALID_INPUT', message: 'Invalid request' },
-      { status: 400 },
+      { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
+      { status: 500 },
     );
   }
 }

@@ -18,10 +18,10 @@ export async function POST(
 
     return Response.json(result.booking, { status: 200 });
   } catch (error) {
-    console.error('Cancellation error:', error);
+    console.error('POST /api/bookings/{id}/cancel error:', error);
     return Response.json(
-      { code: 'INVALID_INPUT', message: 'Failed to cancel booking' },
-      { status: 400 },
+      { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
+      { status: 500 },
     );
   }
 }
