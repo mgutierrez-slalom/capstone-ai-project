@@ -4,39 +4,63 @@ import { execSync } from 'node:child_process';
 import { beforeAll, afterEach, afterAll } from 'vitest';
 
 // ============================================================================
-// PHASE 1: Set test environment BEFORE importing Prisma client
+// PHASE 1: Safety guard — verify the Prisma client is pointed at test.db
+//
+// DATABASE_URL is injected by vitest.config.ts `test.env` before any worker
+// module is evaluated, so the Prisma client's static import (which is hoisted
+// by ESM semantics) already sees the correct URL.
+//
+// This guard makes the safety invariant explicit: if the wrong URL somehow
+// reaches this point the test run aborts before touching any data.
 // ============================================================================
 
-// Set DATABASE_URL to test database (must be before importing Prisma)
-const testDbPath = path.resolve(process.cwd(), 'prisma', 'test.db');
-process.env.DATABASE_URL = `file:${testDbPath}`;
+const expectedTestDbPath = path.resolve(process.cwd(), 'prisma', 'test.db');
 
-// Now we can safely import Prisma (it will use the test database URL)
+function resolveDbPath(url: string): string {
+  if (!url.startsWith('file:')) return url;
+  const raw = url.slice('file:'.length);
+  // Absolute paths start with / (POSIX) or a drive letter followed by : (Win)
+  return path.isAbsolute(raw) ? path.normalize(raw) : path.resolve(process.cwd(), raw);
+}
+
+const configuredUrl = process.env.DATABASE_URL ?? '';
+const resolvedConfiguredPath = resolveDbPath(configuredUrl);
+
+if (path.normalize(resolvedConfiguredPath) !== path.normalize(expectedTestDbPath)) {
+  throw new Error(
+    `[TEST SAFETY] DATABASE_URL resolves to "${resolvedConfiguredPath}" ` +
+      `but the test suite requires "${expectedTestDbPath}". ` +
+      `Refusing to run to protect the development database.`,
+  );
+}
+
+// Safe to import Prisma — the env var is already set correctly.
 import { prisma } from '@/lib/prisma/client';
 
 // ============================================================================
 // PHASE 2: Test database lifecycle
 // ============================================================================
 
+const testDbPath = expectedTestDbPath;
+
 /**
- * Initialize test database: create, migrate, seed
+ * Initialize test database: apply migrations if the file does not yet exist,
+ * then seed with fixture rooms.
+ *
+ * The test.db file is NOT deleted on every run; only booking rows are cleared
+ * between test suites (rooms are preserved as stable fixtures).
  */
 async function initializeTestDatabase() {
-  // Ensure test database directory exists
   const dbDir = path.dirname(testDbPath);
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
-  // Check if test database exists - if not, we'll create it
-  const dbExists = fs.existsSync(testDbPath);
-
-  if (!dbExists) {
-    // Database doesn't exist, migrations will create it
+  if (!fs.existsSync(testDbPath)) {
     try {
       execSync('npx prisma migrate deploy', {
         cwd: process.cwd(),
-        env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
+        env: { ...process.env },
         stdio: 'pipe',
       });
     } catch (error) {
@@ -45,49 +69,29 @@ async function initializeTestDatabase() {
     }
   }
 
-  // Seed test data (will skip if rooms already exist)
   await seedTestData();
 }
 
 /**
- * Seed test database with minimal required test data
+ * Seed fixture rooms if none exist yet.
  */
 async function seedTestData() {
-  // Check if rooms already exist, if so, skip seeding
   const existingRooms = await prisma.room.findMany();
   if (existingRooms.length > 0) {
-    return; // Rooms already exist, skip seeding
+    return;
   }
 
-  // Create test rooms (same as dev seed)
-  await prisma.room.create({
-    data: {
-      name: 'Orion',
-      capacity: 4,
-      location: 'Floor 2',
-    },
-  });
-
-  await prisma.room.create({
-    data: {
-      name: 'Andromeda',
-      capacity: 8,
-      location: 'Floor 2',
-    },
-  });
-
-  await prisma.room.create({
-    data: {
-      name: 'Apollo',
-      capacity: 12,
-      location: 'Floor 3',
-    },
+  await prisma.room.createMany({
+    data: [
+      { name: 'Orion', capacity: 4, location: 'Floor 2' },
+      { name: 'Andromeda', capacity: 8, location: 'Floor 2' },
+      { name: 'Apollo', capacity: 12, location: 'Floor 3' },
+    ],
   });
 }
 
 /**
- * Clear mutable test data between test suites
- * (preserves room schema but clears all bookings)
+ * Clear mutable test data between test suites (preserves rooms).
  */
 async function clearMutableData() {
   await prisma.booking.deleteMany({});
@@ -97,24 +101,14 @@ async function clearMutableData() {
 // PHASE 3: Vitest hooks
 // ============================================================================
 
-/**
- * Before all tests: initialize test database once
- */
 beforeAll(async () => {
   await initializeTestDatabase();
 });
 
-/**
- * After each test suite: clear bookings to ensure isolation
- * (rooms remain as test fixtures)
- */
 afterEach(async () => {
   await clearMutableData();
 });
 
-/**
- * After all tests: close Prisma connection gracefully
- */
 afterAll(async () => {
   await prisma.$disconnect();
 });

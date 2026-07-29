@@ -37,12 +37,20 @@ yarn-error.log*
 # database files (both root level and prisma directory)
 dev.db
 dev.db-journal
+dev.db-shm
+dev.db-wal
 test.db
 test.db-journal
+test.db-shm
+test.db-wal
 prisma/dev.db
 prisma/dev.db-journal
+prisma/dev.db-shm
+prisma/dev.db-wal
 prisma/test.db
 prisma/test.db-journal
+prisma/test.db-shm
+prisma/test.db-wal
 
 # vercel
 .vercel

@@ -177,14 +177,3 @@ export async function cancelBookingIfConfirmed(bookingId: string): Promise<Booki
     throw error;
   }
 }
-
-/**
- * Legacy function - kept for backward compatibility but deprecated.
- * Use cancelBookingIfConfirmed instead for atomic cancellation.
- */
-export async function cancelBooking(bookingId: string) {
-  return prisma.booking.update({
-    where: { id: bookingId },
-    data: { status: 'CANCELLED' as BookingStatus },
-  });
-}

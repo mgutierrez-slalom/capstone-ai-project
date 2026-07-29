@@ -75,10 +75,11 @@ Direct invocation of Next.js route handlers to verify HTTP API behavior:
 - Database isolation (uses test.db, not dev.db)
 
 **Test fixtures**:
-- Uses deterministic future timestamps (2026-08-15T...)
+- Uses clock-relative future timestamps (e.g., `hoursFromNow(25)`) from `tests/helpers/time-fixtures.ts`
 - Seeded test rooms (Orion, Andromeda, Apollo) from `tests/setup.ts`
 - `beforeEach` clears bookings; rooms remain for next test
-- No relative dates or "now ± N hours" (ensures reproducibility)
+- Past-booking tests use explicitly calculated past timestamps (`hoursAgo(48)`)
+- Pure-function tests (booking-rules) may use fixed dates since they do not validate past/future
 
 ## Test Database Isolation
 
@@ -88,11 +89,11 @@ Direct invocation of Next.js route handlers to verify HTTP API behavior:
 Test Run Start
   ↓
 [setup.ts] beforeAll
-  - Set DATABASE_URL to prisma/test.db
-  - Remove existing test.db (if present)
-  - Create fresh test.db
-  - Execute: prisma migrate deploy
-  - Seed 3 test rooms (Orion, Andromeda, Apollo)
+  - Verify DATABASE_URL points to prisma/test.db (safety guard)
+  - If prisma/test.db does not yet exist:
+      Execute: prisma migrate deploy (creates and migrates the database)
+  - If prisma/test.db already exists: skip migration (schema is already current)
+  - Seed 3 rooms (Orion, Andromeda, Apollo) if none exist yet
   ↓
 [Each Test Suite]
   - Run tests with seeded rooms
@@ -113,7 +114,7 @@ Test Run Start
 |---|---|---|
 | **Development** | `prisma/dev.db` | `DATABASE_URL="file:./dev.db"` in `.env.local` |
 | **Tests** | `prisma/test.db` | `DATABASE_URL="file:./test.db"` set by `tests/setup.ts` |
-| **Production** | Cloud PostgreSQL | `DATABASE_URL=postgres://...` in `.env` |
+| **Production** | SQLite (MVP; PostgreSQL is a future migration path) | `DATABASE_URL` in production env |
 
 **Critical**: Test database URL is set **before** importing Prisma client in `tests/setup.ts`, ensuring the client never connects to development data.
 
@@ -129,11 +130,15 @@ Test Run Start
 
 ### Before All Tests (beforeAll)
 
-1. Verify `prisma/` directory exists
-2. Delete existing `prisma/test.db` and `prisma/test.db-journal`
-3. Execute `prisma migrate deploy` to apply all migrations
-4. Seed 3 rooms into test database
+1. **Safety guard**: verify `DATABASE_URL` resolves to `prisma/test.db` using normalized absolute paths; abort immediately if not
+2. If `prisma/test.db` does not exist: execute `prisma migrate deploy` to create and migrate it
+3. If `prisma/test.db` already exists: reuse it (migrations are idempotent, skip re-applying)
+4. Seed 3 fixture rooms (Orion, Andromeda, Apollo) if none exist yet
 5. Prisma client ready for tests
+
+> **Note**: The test database is **not** deleted and recreated on every run.  
+> Only booking rows are cleared between test suites. This keeps test startup fast
+> while preserving isolation for mutable data.
 
 ### After Each Suite (afterEach)
 
@@ -163,8 +168,7 @@ In GitHub Actions:
 - Migrations applied automatically
 - Tests run in isolation
 - Logs contain any test failures (never dev.db issues)
-- Success = all 35+ tests pass
-
+  - Success = all tests pass (booking-rules, service, handlers, concurrency)
 ## Running Tests Locally
 
 ```bash
