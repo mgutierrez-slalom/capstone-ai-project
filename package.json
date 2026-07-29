@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "prisma generate && tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio"
