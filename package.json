@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run tests/handlers/bookings.handler.test.ts tests/handlers/rooms.handler.test.ts tests/booking-rules.test.ts",
+    "test": "vitest run",
     "test:concurrency": "vitest run tests/handlers/concurrency.test.ts",
     "test:service": "vitest run tests/service/",
     "test:all": "vitest run",

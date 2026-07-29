@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GET, POST } from '@/app/api/bookings/route';
 import { POST as CANCEL_POST } from '@/app/api/bookings/[id]/cancel/route';
 import type { NextRequest } from 'next/server';
 import * as roomRepo from '@/lib/prisma/room-repository';
 import { prisma } from '@/lib/prisma/client';
+import { hoursFromNow, hoursAgo, futureInterval } from '../helpers/time-fixtures';
 
 describe('GET /api/bookings (Handler)', () => {
   beforeEach(async () => {
@@ -28,27 +29,27 @@ describe('GET /api/bookings (Handler)', () => {
     const roomId = rooms[0].id;
 
     // Create a confirmed booking
-    const time1 = new Date('2026-08-15T10:00:00Z');
+    const time1 = hoursFromNow(25);
     await prisma.booking.create({
       data: {
         roomId,
         organizerName: 'Alice',
         title: 'Confirmed Meeting',
         startTime: time1,
-        endTime: new Date(time1.getTime() + 3600000),
+        endTime: hoursFromNow(26),
         status: 'CONFIRMED',
       },
     });
 
     // Create a cancelled booking (should not be returned)
-    const time2 = new Date('2026-08-15T12:00:00Z');
+    const time2 = hoursFromNow(27);
     await prisma.booking.create({
       data: {
         roomId,
         organizerName: 'Bob',
         title: 'Cancelled Meeting',
         startTime: time2,
-        endTime: new Date(time2.getTime() + 3600000),
+        endTime: hoursFromNow(28),
         status: 'CANCELLED',
       },
     });
@@ -66,32 +67,32 @@ describe('GET /api/bookings (Handler)', () => {
     const rooms = await roomRepo.getAllRooms();
     const roomId = rooms[0].id;
 
-    // Create bookings in reverse chronological order
-    const time1 = new Date('2026-08-15T14:00:00Z');
-    const time2 = new Date('2026-08-15T10:00:00Z');
+    // Create bookings in reverse chronological order to verify sorting
+    const laterTime = hoursFromNow(30);
+    const earlierTime = hoursFromNow(25);
 
-    // Create second booking first (reverse order)
+    // Create the later booking first (reverse order)
     const booking1 = await prisma.booking.create({
       data: {
         roomId,
         organizerName: 'Bob',
         title: 'Later Meeting',
-        startTime: time1,
-        endTime: new Date(time1.getTime() + 3600000),
+        startTime: laterTime,
+        endTime: hoursFromNow(31),
         status: 'CONFIRMED',
       },
     });
     expect(booking1).toBeDefined();
     expect(booking1.id).toBeTruthy();
 
-    // Create first booking second
+    // Create the earlier booking second
     const booking2 = await prisma.booking.create({
       data: {
         roomId,
         organizerName: 'Alice',
         title: 'Earlier Meeting',
-        startTime: time2,
-        endTime: new Date(time2.getTime() + 3600000),
+        startTime: earlierTime,
+        endTime: hoursFromNow(26),
         status: 'CONFIRMED',
       },
     });
@@ -117,8 +118,8 @@ describe('GET /api/bookings (Handler)', () => {
         roomId,
         organizerName: 'Alice',
         title: 'Team Meeting',
-        startTime: new Date('2026-08-15T10:00:00Z'),
-        endTime: new Date('2026-08-15T11:00:00Z'),
+        startTime: hoursFromNow(25),
+        endTime: hoursFromNow(26),
         status: 'CONFIRMED',
       },
     });
@@ -167,8 +168,7 @@ describe('POST /api/bookings (Handler)', () => {
   });
 
   it('returns HTTP 201 with complete created Booking', async () => {
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T11:00:00Z');
+    const { startTime, endTime } = futureInterval(25, 26);
 
     const request = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -200,8 +200,7 @@ describe('POST /api/bookings (Handler)', () => {
   });
 
   it('trims whitespace from text fields', async () => {
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T11:00:00Z');
+    const { startTime, endTime } = futureInterval(25, 26);
 
     const request = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -223,8 +222,8 @@ describe('POST /api/bookings (Handler)', () => {
   });
 
   it('accepts exactly four hours as maximum duration', async () => {
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T14:00:00Z'); // Exactly 4 hours
+    const startTime = hoursFromNow(25);
+    const endTime = new Date(startTime.getTime() + 4 * 60 * 60 * 1000); // exactly 4 h
 
     const request = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -253,12 +252,149 @@ describe('POST /api/bookings (Handler)', () => {
     });
 
     const response = (await POST(request)) as Response;
-    expect(response.status).toBe(500); // Invalid JSON causes server error
+    expect(response.status).toBe(400);
+
+    const error = await response.json();
+    expect(error.code).toBe('INVALID_INPUT');
+    expect(error).toHaveProperty('message');
+  });
+
+  it('returns HTTP 400 for missing required fields', async () => {
+    const request = new Request('http://localhost:3000/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, organizerName: 'Alice' }), // missing title, startTime, endTime
+    });
+
+    const response = (await POST(request)) as Response;
+    expect(response.status).toBe(400);
+
+    const error = await response.json();
+    expect(error.code).toBe('INVALID_INPUT');
+    expect(error).toHaveProperty('message');
+  });
+
+  it('returns HTTP 400 for non-string title', async () => {
+    const { startTime, endTime } = futureInterval(25, 26);
+
+    const request = new Request('http://localhost:3000/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        organizerName: 'Alice',
+        title: 42, // not a string
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      }),
+    });
+
+    const response = (await POST(request)) as Response;
+    expect(response.status).toBe(400);
+
+    const error = await response.json();
+    expect(error.code).toBe('INVALID_INPUT');
+    expect(error.field).toBe('title');
+  });
+
+  it('returns HTTP 400 for non-string organizerName', async () => {
+    const { startTime, endTime } = futureInterval(25, 26);
+
+    const request = new Request('http://localhost:3000/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        organizerName: true, // not a string
+        title: 'Meeting',
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      }),
+    });
+
+    const response = (await POST(request)) as Response;
+    expect(response.status).toBe(400);
+
+    const error = await response.json();
+    expect(error.code).toBe('INVALID_INPUT');
+    expect(error.field).toBe('organizerName');
+  });
+
+  it('returns HTTP 400 for invalid startTime date string', async () => {
+    const request = new Request('http://localhost:3000/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        organizerName: 'Alice',
+        title: 'Meeting',
+        startTime: 'not-a-date',
+        endTime: hoursFromNow(26).toISOString(),
+      }),
+    });
+
+    const response = (await POST(request)) as Response;
+    expect(response.status).toBe(400);
+
+    const error = await response.json();
+    expect(error.code).toBe('INVALID_INPUT');
+    expect(error.field).toBe('startTime');
+  });
+
+  it('returns HTTP 400 for invalid endTime date string', async () => {
+    const request = new Request('http://localhost:3000/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        organizerName: 'Alice',
+        title: 'Meeting',
+        startTime: hoursFromNow(25).toISOString(),
+        endTime: 'not-a-date',
+      }),
+    });
+
+    const response = (await POST(request)) as Response;
+    expect(response.status).toBe(400);
+
+    const error = await response.json();
+    expect(error.code).toBe('INVALID_INPUT');
+    expect(error.field).toBe('endTime');
+  });
+
+  it('returns HTTP 500 for internal repository failure without exposing details', async () => {
+    const { startTime, endTime } = futureInterval(25, 26);
+    const bookingService = await import('@/lib/booking/booking-service');
+    const spy = vi
+      .spyOn(bookingService, 'createBooking')
+      .mockRejectedValueOnce(new Error('SQLite: disk I/O error'));
+
+    const request = new Request('http://localhost:3000/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        organizerName: 'Alice',
+        title: 'Meeting',
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      }),
+    });
+
+    const response = (await POST(request)) as Response;
+    expect(response.status).toBe(500);
+
+    const error = await response.json();
+    expect(error.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(JSON.stringify(error)).not.toContain('SQLite');
+    expect(JSON.stringify(error)).not.toContain('disk I/O');
+
+    spy.mockRestore();
   });
 
   it('returns HTTP 422 for endTime <= startTime', async () => {
-    const startTime = new Date('2026-08-15T11:00:00Z');
-    const endTime = new Date('2026-08-15T10:00:00Z'); // Before startTime
+    const startTime = hoursFromNow(26);
+    const endTime = hoursFromNow(25); // end before start
 
     const request = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -281,8 +417,8 @@ describe('POST /api/bookings (Handler)', () => {
   });
 
   it('returns HTTP 400 for startTime in the past', async () => {
-    const startTime = new Date('2020-01-01T10:00:00Z'); // In the past
-    const endTime = new Date('2020-01-01T11:00:00Z');
+    const startTime = hoursAgo(48); // clearly in the past
+    const endTime = hoursAgo(47);
 
     const request = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -304,8 +440,8 @@ describe('POST /api/bookings (Handler)', () => {
   });
 
   it('returns HTTP 400 for duration > 4 hours', async () => {
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T14:00:01Z'); // 4h 0m 1s
+    const startTime = hoursFromNow(25);
+    const endTime = new Date(startTime.getTime() + 4 * 60 * 60 * 1000 + 1000); // 4h + 1s
 
     const request = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -327,8 +463,7 @@ describe('POST /api/bookings (Handler)', () => {
   });
 
   it('returns HTTP 400 for empty organizerName', async () => {
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T11:00:00Z');
+    const { startTime, endTime } = futureInterval(25, 26);
 
     const request = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -350,8 +485,7 @@ describe('POST /api/bookings (Handler)', () => {
   });
 
   it('returns HTTP 400 for empty title', async () => {
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T11:00:00Z');
+    const { startTime, endTime } = futureInterval(25, 26);
 
     const request = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -373,8 +507,7 @@ describe('POST /api/bookings (Handler)', () => {
   });
 
   it('returns HTTP 400 for unknown roomId', async () => {
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T11:00:00Z');
+    const { startTime, endTime } = futureInterval(25, 26);
 
     const request = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -396,8 +529,7 @@ describe('POST /api/bookings (Handler)', () => {
   });
 
   it('returns HTTP 409 for overlapping booking', async () => {
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T11:00:00Z');
+    const { startTime, endTime } = futureInterval(25, 26);
 
     // Create first booking
     const request1 = new Request('http://localhost:3000/api/bookings', {
@@ -416,8 +548,8 @@ describe('POST /api/bookings (Handler)', () => {
     expect(response1.status).toBe(201);
 
     // Try to create overlapping booking
-    const startTime2 = new Date('2026-08-15T10:30:00Z'); // Overlaps with first
-    const endTime2 = new Date('2026-08-15T11:30:00Z');
+    const start2 = new Date(startTime.getTime() + 30 * 60 * 1000); // +30 min
+    const end2 = new Date(endTime.getTime() + 30 * 60 * 1000);
 
     const request2 = new Request('http://localhost:3000/api/bookings', {
       method: 'POST',
@@ -426,8 +558,8 @@ describe('POST /api/bookings (Handler)', () => {
         roomId,
         organizerName: 'Bob',
         title: 'Meeting 2',
-        startTime: startTime2.toISOString(),
-        endTime: endTime2.toISOString(),
+        startTime: start2.toISOString(),
+        endTime: end2.toISOString(),
       }),
     });
 
@@ -443,8 +575,7 @@ describe('POST /api/bookings (Handler)', () => {
     const room1Id = rooms[0].id;
     const room2Id = rooms[1].id;
 
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T11:00:00Z');
+    const { startTime, endTime } = futureInterval(25, 26);
 
     // Create booking in room 1
     const request1 = new Request('http://localhost:3000/api/bookings', {
@@ -493,16 +624,13 @@ describe('POST /api/bookings/[id]/cancel (Handler)', () => {
     const rooms = await roomRepo.getAllRooms();
     roomId = rooms[0].id;
 
-    const startTime = new Date('2026-08-15T10:00:00Z');
-    const endTime = new Date('2026-08-15T11:00:00Z');
-
     const booking = await prisma.booking.create({
       data: {
         roomId,
         organizerName: 'Alice',
         title: 'Meeting',
-        startTime,
-        endTime,
+        startTime: hoursFromNow(25),
+        endTime: hoursFromNow(26),
         status: 'CONFIRMED',
       },
     });

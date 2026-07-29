@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createBooking, cancelBooking } from '@/lib/booking/booking-service';
 import * as bookingRepo from '@/lib/prisma/booking-repository';
 import * as roomRepo from '@/lib/prisma/room-repository';
+import { futureInterval } from '../helpers/time-fixtures';
 
 describe('Concurrency: Booking Creation Race Conditions', () => {
   let roomId: string;
@@ -12,8 +13,8 @@ describe('Concurrency: Booking Creation Race Conditions', () => {
   });
 
   it('concurrent identical booking requests - only one succeeds (Promise.allSettled)', async () => {
-    const startTime = new Date('2026-08-20T10:00:00Z');
-    const endTime = new Date('2026-08-20T11:00:00Z');
+    // Both requests share the exact same computed interval — no timing window
+    const { startTime, endTime } = futureInterval(25, 26);
 
     const request = {
       roomId,
@@ -62,8 +63,9 @@ describe('Concurrency: Booking Creation Race Conditions', () => {
   });
 
   it('concurrent overlapping booking requests - only one succeeds', async () => {
-    const startTime = new Date('2026-08-21T10:00:00Z');
-    const endTime = new Date('2026-08-21T11:00:00Z');
+    const { startTime, endTime } = futureInterval(27, 28);
+    const overlapStart = new Date(startTime.getTime() + 30 * 60 * 1000); // +30 min
+    const overlapEnd = new Date(endTime.getTime() + 30 * 60 * 1000);
 
     const request1 = {
       roomId,
@@ -77,8 +79,8 @@ describe('Concurrency: Booking Creation Race Conditions', () => {
       roomId,
       organizerName: 'Charlie',
       title: 'Second Request',
-      startTime: new Date('2026-08-21T10:30:00Z'), // Overlaps with first
-      endTime: new Date('2026-08-21T11:30:00Z'),
+      startTime: overlapStart,
+      endTime: overlapEnd,
     };
 
     // Launch simultaneously
@@ -107,22 +109,15 @@ describe('Concurrency: Booking Creation Race Conditions', () => {
       expect(failures[0].error.code).toBe('BOOKING_CONFLICT');
     }
 
-    // Only one booking should exist
-    const bookings = await bookingRepo.getAllConfirmedBookings();
-    const filtered = bookings.filter(
-      (b) =>
-        b.roomId === roomId &&
-        b.startTime >= new Date('2026-08-21T09:00:00Z') &&
-        b.startTime < new Date('2026-08-21T12:00:00Z'),
-    );
-    expect(filtered.length).toBe(1);
+    // Only one booking should exist in this room for this interval
+    const bookings = await bookingRepo.getConfirmedBookingsForRoom(roomId, startTime, overlapEnd);
+    expect(bookings.length).toBe(1);
   });
 
   it('SQLite lock/transaction errors do not become BOOKING_CONFLICT', async () => {
     // This test documents SQLite behavior under stress
     // Create a normal booking first
-    const startTime = new Date('2026-08-22T10:00:00Z');
-    const endTime = new Date('2026-08-22T11:00:00Z');
+    const { startTime, endTime } = futureInterval(29, 30);
 
     const request = {
       roomId,
@@ -153,8 +148,7 @@ describe('Concurrency: Booking Cancellation Race Conditions', () => {
     const rooms = await roomRepo.getAllRooms();
     roomId = rooms[0].id;
 
-    const startTime = new Date('2026-08-23T10:00:00Z');
-    const endTime = new Date('2026-08-23T11:00:00Z');
+    const { startTime, endTime } = futureInterval(31, 32);
 
     const createResult = await createBooking({
       roomId,
@@ -212,8 +206,7 @@ describe('Concurrency: Booking Cancellation Race Conditions', () => {
 
   it('concurrent cancellation and creation of same slot - create fails after cancel', async () => {
     // One thread cancels, other tries to create in the freed slot
-    const startTime = new Date('2026-08-24T10:00:00Z');
-    const endTime = new Date('2026-08-24T11:00:00Z');
+    const { startTime, endTime } = futureInterval(33, 34);
 
     // First: create a booking to be cancelled
     const original = await createBooking({
@@ -268,8 +261,7 @@ describe('Concurrency: Documentation of SQLite Behavior', () => {
     const room1 = rooms[0];
     const room2 = rooms.length > 1 ? rooms[1] : rooms[0];
 
-    const startTime = new Date('2026-08-25T10:00:00Z');
-    const endTime = new Date('2026-08-25T11:00:00Z');
+    const { startTime, endTime } = futureInterval(35, 36);
 
     // Same room: only one succeeds
     const sameRoomResults = await Promise.allSettled([
@@ -297,20 +289,21 @@ describe('Concurrency: Documentation of SQLite Behavior', () => {
 
     // Different rooms: both succeed (no cross-room conflict)
     if (room1.id !== room2.id) {
+      const { startTime: diffStart, endTime: diffEnd } = futureInterval(37, 38);
       const diffRoomResults = await Promise.allSettled([
         createBooking({
           roomId: room1.id,
           organizerName: 'Test3',
           title: 'DiffRoom1',
-          startTime: new Date('2026-08-25T14:00:00Z'),
-          endTime: new Date('2026-08-25T15:00:00Z'),
+          startTime: diffStart,
+          endTime: diffEnd,
         }),
         createBooking({
           roomId: room2.id,
           organizerName: 'Test4',
           title: 'DiffRoom2',
-          startTime: new Date('2026-08-25T14:00:00Z'),
-          endTime: new Date('2026-08-25T15:00:00Z'),
+          startTime: diffStart,
+          endTime: diffEnd,
         }),
       ]);
 

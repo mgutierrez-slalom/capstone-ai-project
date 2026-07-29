@@ -82,6 +82,11 @@ export function BookingForm() {
 
     if (!formData.startTime) {
       newErrors.startTime = 'Start time is required';
+    } else {
+      const start = new Date(formData.startTime);
+      if (start <= new Date()) {
+        newErrors.startTime = 'Start time must be in the future';
+      }
     }
 
     if (!formData.endTime) {
