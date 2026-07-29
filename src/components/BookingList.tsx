@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
+interface Room {
+  id: string;
+  name: string;
+}
+
 interface Booking {
   id: string;
   roomId: string;
@@ -10,9 +15,8 @@ interface Booking {
   startTime: string;
   endTime: string;
   status: string;
-  room: {
-    name: string;
-  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ToastMessage {
@@ -23,6 +27,7 @@ interface ToastMessage {
 
 export function BookingList() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [rooms, setRooms] = useState<Map<string, string>>(new Map()); // roomId -> roomName
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -33,12 +38,22 @@ export function BookingList() {
     async function load() {
       try {
         setLoading(true);
-        const response = await fetch('/api/bookings');
-        if (!response.ok) {
+        // Fetch rooms first
+        const roomsResponse = await fetch('/api/rooms');
+        if (!roomsResponse.ok) {
+          throw new Error('Failed to load rooms');
+        }
+        const roomsData: Room[] = await roomsResponse.json();
+        const roomMap = new Map(roomsData.map((r) => [r.id, r.name]));
+        setRooms(roomMap);
+
+        // Then fetch bookings
+        const bookingsResponse = await fetch('/api/bookings');
+        if (!bookingsResponse.ok) {
           throw new Error('Failed to load bookings');
         }
-        const data = await response.json();
-        setBookings(data);
+        const bookingsData = await bookingsResponse.json();
+        setBookings(bookingsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -140,7 +155,7 @@ export function BookingList() {
           <tbody>
             {bookings.map((booking) => (
               <tr key={booking.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{booking.room.name}</td>
+                <td className="px-4 py-3 font-medium">{rooms.get(booking.roomId) || 'Unknown Room'}</td>
                 <td className="px-4 py-3">{booking.organizerName}</td>
                 <td className="px-4 py-3">{booking.title}</td>
                 <td className="px-4 py-3">{new Date(booking.startTime).toLocaleString()}</td>
